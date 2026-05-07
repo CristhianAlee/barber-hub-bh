@@ -1,0 +1,84 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+
+type Barbershop = {
+  id: string;
+  name: string;
+  slug: string;
+  phone: string | null;
+  address: string | null;
+  logo_url: string | null;
+  booking_interval_minutes: number;
+  max_advance_days: number;
+  onboarded: boolean;
+};
+
+type AuthCtx = {
+  user: User | null;
+  session: Session | null;
+  barbershop: Barbershop | null;
+  loading: boolean;
+  refreshBarbershop: () => Promise<void>;
+  signOut: () => Promise<void>;
+};
+
+const Ctx = createContext<AuthCtx | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [barbershop, setBarbershop] = useState<Barbershop | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadBarbershop = async (uid: string) => {
+    const { data } = await supabase
+      .from("barbershops")
+      .select("*")
+      .eq("owner_id", uid)
+      .maybeSingle();
+    setBarbershop((data as Barbershop) ?? null);
+  };
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
+      setSession(sess);
+      setUser(sess?.user ?? null);
+      if (sess?.user) {
+        setTimeout(() => loadBarbershop(sess.user.id), 0);
+      } else {
+        setBarbershop(null);
+      }
+    });
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) loadBarbershop(s.user.id).finally(() => setLoading(false));
+      else setLoading(false);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  return (
+    <Ctx.Provider
+      value={{
+        user,
+        session,
+        barbershop,
+        loading,
+        refreshBarbershop: async () => user && loadBarbershop(user.id),
+        signOut: async () => {
+          await supabase.auth.signOut();
+        },
+      }}
+    >
+      {children}
+    </Ctx.Provider>
+  );
+}
+
+export const useAuth = () => {
+  const c = useContext(Ctx);
+  if (!c) throw new Error("useAuth deve ser usado dentro de AuthProvider");
+  return c;
+};
