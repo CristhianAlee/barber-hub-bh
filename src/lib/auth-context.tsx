@@ -66,7 +66,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         barbershop,
         loading,
-        refreshBarbershop: async () => user && loadBarbershop(user.id),
+        refreshBarbershop: async () => {
+          if (user) await loadBarbershop(user.id);
+        },
         signOut: async () => {
           await supabase.auth.signOut();
         },
