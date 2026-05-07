@@ -66,7 +66,7 @@ function AgendamentosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, barbershop]);
 
-  const updateStatus = async (id: string, status: string) => {
+  const updateStatus = async (id: string, status: "pending" | "confirmed" | "completed" | "cancelled") => {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) return toast.error("Erro ao atualizar");
     toast.success("Status atualizado");

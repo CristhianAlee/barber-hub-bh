@@ -18,6 +18,11 @@ import { Route as AuthResetRouteImport } from './routes/auth.reset'
 import { Route as AuthRecoverRouteImport } from './routes/auth.recover'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
+import { Route as AppFinanceiroRouteImport } from './routes/app.financeiro'
+import { Route as AppEstoqueRouteImport } from './routes/app.estoque'
+import { Route as AppConfiguracoesRouteImport } from './routes/app.configuracoes'
+import { Route as AppClientesRouteImport } from './routes/app.clientes'
+import { Route as AppAgendamentosRouteImport } from './routes/app.agendamentos'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -64,11 +69,41 @@ const AppOnboardingRoute = AppOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFinanceiroRoute = AppFinanceiroRouteImport.update({
+  id: '/financeiro',
+  path: '/financeiro',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppEstoqueRoute = AppEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppConfiguracoesRoute = AppConfiguracoesRouteImport.update({
+  id: '/configuracoes',
+  path: '/configuracoes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppClientesRoute = AppClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAgendamentosRoute = AppAgendamentosRouteImport.update({
+  id: '/agendamentos',
+  path: '/agendamentos',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/app/agendamentos': typeof AppAgendamentosRoute
+  '/app/clientes': typeof AppClientesRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/estoque': typeof AppEstoqueRoute
+  '/app/financeiro': typeof AppFinanceiroRoute
   '/app/onboarding': typeof AppOnboardingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -79,6 +114,11 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/app/agendamentos': typeof AppAgendamentosRoute
+  '/app/clientes': typeof AppClientesRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/estoque': typeof AppEstoqueRoute
+  '/app/financeiro': typeof AppFinanceiroRoute
   '/app/onboarding': typeof AppOnboardingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -91,6 +131,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRouteWithChildren
+  '/app/agendamentos': typeof AppAgendamentosRoute
+  '/app/clientes': typeof AppClientesRoute
+  '/app/configuracoes': typeof AppConfiguracoesRoute
+  '/app/estoque': typeof AppEstoqueRoute
+  '/app/financeiro': typeof AppFinanceiroRoute
   '/app/onboarding': typeof AppOnboardingRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/recover': typeof AuthRecoverRoute
@@ -104,6 +149,11 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/app/agendamentos'
+    | '/app/clientes'
+    | '/app/configuracoes'
+    | '/app/estoque'
+    | '/app/financeiro'
     | '/app/onboarding'
     | '/auth/login'
     | '/auth/recover'
@@ -114,6 +164,11 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/app/agendamentos'
+    | '/app/clientes'
+    | '/app/configuracoes'
+    | '/app/estoque'
+    | '/app/financeiro'
     | '/app/onboarding'
     | '/auth/login'
     | '/auth/recover'
@@ -125,6 +180,11 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/auth'
+    | '/app/agendamentos'
+    | '/app/clientes'
+    | '/app/configuracoes'
+    | '/app/estoque'
+    | '/app/financeiro'
     | '/app/onboarding'
     | '/auth/login'
     | '/auth/recover'
@@ -204,15 +264,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOnboardingRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/financeiro': {
+      id: '/app/financeiro'
+      path: '/financeiro'
+      fullPath: '/app/financeiro'
+      preLoaderRoute: typeof AppFinanceiroRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/estoque': {
+      id: '/app/estoque'
+      path: '/estoque'
+      fullPath: '/app/estoque'
+      preLoaderRoute: typeof AppEstoqueRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/configuracoes': {
+      id: '/app/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/app/configuracoes'
+      preLoaderRoute: typeof AppConfiguracoesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/clientes': {
+      id: '/app/clientes'
+      path: '/clientes'
+      fullPath: '/app/clientes'
+      preLoaderRoute: typeof AppClientesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/agendamentos': {
+      id: '/app/agendamentos'
+      path: '/agendamentos'
+      fullPath: '/app/agendamentos'
+      preLoaderRoute: typeof AppAgendamentosRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppAgendamentosRoute: typeof AppAgendamentosRoute
+  AppClientesRoute: typeof AppClientesRoute
+  AppConfiguracoesRoute: typeof AppConfiguracoesRoute
+  AppEstoqueRoute: typeof AppEstoqueRoute
+  AppFinanceiroRoute: typeof AppFinanceiroRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAgendamentosRoute: AppAgendamentosRoute,
+  AppClientesRoute: AppClientesRoute,
+  AppConfiguracoesRoute: AppConfiguracoesRoute,
+  AppEstoqueRoute: AppEstoqueRoute,
+  AppFinanceiroRoute: AppFinanceiroRoute,
   AppOnboardingRoute: AppOnboardingRoute,
   AppIndexRoute: AppIndexRoute,
 }
