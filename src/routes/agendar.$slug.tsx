@@ -1,0 +1,442 @@
+import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Logo } from "@/components/Logo";
+import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
+import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
+import { toast } from "sonner";
+
+export const Route = createFileRoute("/agendar/$slug")({
+  component: PublicBooking,
+});
+
+const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
+const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+
+function PublicBooking() {
+  const { slug } = useParams({ from: "/agendar/$slug" });
+  const navigate = useNavigate();
+  const [bs, setBs] = useState<any>(null);
+  const [services, setServices] = useState<any[]>([]);
+  const [profs, setProfs] = useState<any[]>([]);
+  const [hours, setHours] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [step, setStep] = useState(0); // 0 welcome, 1 service, 2 prof, 3 date/time, 4 details, 5 done
+  const [serviceId, setServiceId] = useState("");
+  const [profId, setProfId] = useState("");
+  const [date, setDate] = useState<string>("");
+  const [time, setTime] = useState<string>("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [notes, setNotes] = useState("");
+  const [terms, setTerms] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [created, setCreated] = useState<any>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data: b } = await supabase.from("barbershops").select("*").eq("slug", slug).maybeSingle();
+      if (!b) { setLoading(false); return; }
+      setBs(b);
+      const [s, p, h] = await Promise.all([
+        supabase.from("services").select("*").eq("barbershop_id", b.id).eq("active", true).order("price"),
+        supabase.from("professionals").select("*").eq("barbershop_id", b.id).eq("active", true),
+        supabase.from("business_hours").select("*").eq("barbershop_id", b.id),
+      ]);
+      setServices(s.data ?? []);
+      setProfs(p.data ?? []);
+      setHours(h.data ?? []);
+      setLoading(false);
+    })();
+  }, [slug]);
+
+  const service = services.find((s) => s.id === serviceId);
+  const prof = profs.find((p) => p.id === profId);
+
+  // Generate available dates (next N days)
+  const availableDates: { date: string; label: string; closed: boolean }[] = [];
+  if (bs) {
+    for (let i = 0; i < (bs.max_advance_days ?? 30); i++) {
+      const d = addDays(new Date(), i);
+      const dow = d.getDay();
+      const h = hours.find((x) => x.day_of_week === dow);
+      availableDates.push({
+        date: fmtDate(d),
+        label: new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).format(d),
+        closed: !h || h.is_closed,
+      });
+    }
+  }
+
+  // Generate available time slots
+  const [slots, setSlots] = useState<string[]>([]);
+  useEffect(() => {
+    if (!bs || !date || !service) { setSlots([]); return; }
+    (async () => {
+      const dow = new Date(date + "T00:00:00").getDay();
+      const h = hours.find((x) => x.day_of_week === dow);
+      if (!h || h.is_closed) { setSlots([]); return; }
+
+      const interval = bs.booking_interval_minutes ?? 30;
+      const [oh, om] = h.open_time.split(":").map(Number);
+      const [ch, cm] = h.close_time.split(":").map(Number);
+      const start = oh * 60 + om;
+      const end = ch * 60 + cm;
+
+      // Get existing appointments for this date
+      let q = supabase
+        .from("appointments")
+        .select("time, duration_minutes, professional_id")
+        .eq("barbershop_id", bs.id)
+        .eq("date", date)
+        .in("status", ["pending", "confirmed"]);
+      if (profId) q = q.eq("professional_id", profId);
+      const { data: existing } = await q;
+
+      const blocked = new Set<number>();
+      (existing ?? []).forEach((a: any) => {
+        const [hh, mm] = a.time.split(":").map(Number);
+        const startMin = hh * 60 + mm;
+        for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
+      });
+
+      const out: string[] = [];
+      const now = new Date();
+      const isToday = date === fmtDate(now);
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+
+      for (let t = start; t + service.duration_minutes <= end; t += interval) {
+        if (isToday && t <= nowMin) continue;
+        let conflict = false;
+        for (let m = t; m < t + service.duration_minutes; m++) {
+          if (blocked.has(m)) { conflict = true; break; }
+        }
+        if (!conflict) {
+          const hh = String(Math.floor(t / 60)).padStart(2, "0");
+          const mm = String(t % 60).padStart(2, "0");
+          out.push(`${hh}:${mm}`);
+        }
+      }
+      setSlots(out);
+    })();
+  }, [bs, date, service, profId, hours]);
+
+  const submit = async () => {
+    if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10 || !terms) return;
+
+    // If "Sem preferência" — pick first active professional
+    const finalProfId = profId || profs[0]?.id;
+    if (!finalProfId) return toast.error("Nenhum profissional disponível");
+
+    setSubmitting(true);
+    const phoneDigits = onlyDigits(phone);
+
+    // Find or create client
+    const { data: existing } = await supabase
+      .from("clients").select("id").eq("barbershop_id", bs.id).eq("phone", phoneDigits).maybeSingle();
+    let clientId = existing?.id;
+    if (!clientId) {
+      const { data: nc, error } = await supabase
+        .from("clients")
+        .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
+        .select("id").single();
+      if (error) { setSubmitting(false); return toast.error("Erro ao salvar"); }
+      clientId = nc.id;
+    }
+
+    const { error } = await supabase.from("appointments").insert({
+      barbershop_id: bs.id,
+      professional_id: finalProfId,
+      client_id: clientId,
+      service_id: service.id,
+      date, time,
+      duration_minutes: service.duration_minutes,
+      status: "pending",
+      notes: notes || null,
+    });
+    setSubmitting(false);
+    if (error) return toast.error(error.message);
+
+    setCreated({
+      service: service.name, price: service.price,
+      prof: profs.find((p) => p.id === finalProfId)?.name ?? "",
+      date, time, name,
+    });
+    setStep(5);
+  };
+
+  const whatsappLink = () => {
+    if (!bs?.phone || !created) return "#";
+    const msg = `✅ *Agendamento Confirmado!*\n\nOlá ${created.name}!\nMeu agendamento foi confirmado.\n\n✂️ Serviço: ${created.service}\n👤 Profissional: ${created.prof}\n📅 Data: ${formatDateBR(created.date)}\n⏰ Horário: ${created.time}\n💰 Valor: ${brl(Number(created.price))}\n\n📍 ${bs.name}\n${bs.address ?? ""}`;
+    return `https://wa.me/55${bs.phone}?text=${encodeURIComponent(msg)}`;
+  };
+
+  if (loading) {
+    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-gold" /></div>;
+  }
+  if (!bs) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 text-center">
+        <div>
+          <h1 className="font-display text-3xl tracking-wide">Barbearia não encontrada</h1>
+          <p className="mt-2 text-sm text-muted-foreground">O link que você acessou está inválido.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-dark">
+      <div className="mx-auto max-w-xl px-4 py-6 md:py-10">
+        {/* Header */}
+        <div className="mb-6 flex items-center justify-between">
+          {step > 0 && step < 5 ? (
+            <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
+              <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
+            </Button>
+          ) : <div />}
+          <div className="flex items-center gap-2">
+            <Logo size={28} />
+            <span className="font-display text-lg tracking-wider">BARBER<span className="text-gold">HUB</span></span>
+          </div>
+        </div>
+
+        {/* Step 0 — welcome */}
+        {step === 0 && (
+          <Card className="border-border bg-card p-6 text-center md:p-8">
+            <div className="mx-auto mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gold/10">
+              <Scissors className="h-10 w-10 text-gold" />
+            </div>
+            <h1 className="font-display text-3xl tracking-wide md:text-4xl">{bs.name}</h1>
+            {bs.address && (
+              <p className="mt-2 flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" /> {bs.address}
+              </p>
+            )}
+            <Button onClick={() => setStep(1)} className="mt-6 w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold" size="lg">
+              Agendar agora
+            </Button>
+          </Card>
+        )}
+
+        {/* Step 1 — service */}
+        {step === 1 && (
+          <Card className="border-border bg-card p-5">
+            <h2 className="mb-4 font-display text-2xl tracking-wide">Escolha o serviço</h2>
+            <div className="space-y-2">
+              {services.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => { setServiceId(s.id); setStep(2); }}
+                  className={`w-full rounded-lg border p-4 text-left transition ${
+                    serviceId === s.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/40"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{s.name}</div>
+                      <div className="text-xs text-muted-foreground">{s.duration_minutes} min</div>
+                    </div>
+                    <div className="font-mono text-gold">{brl(Number(s.price))}</div>
+                  </div>
+                </button>
+              ))}
+              {services.length === 0 && <p className="text-sm text-muted-foreground">Nenhum serviço disponível.</p>}
+            </div>
+          </Card>
+        )}
+
+        {/* Step 2 — professional */}
+        {step === 2 && (
+          <Card className="border-border bg-card p-5">
+            <h2 className="mb-4 font-display text-2xl tracking-wide">Escolha o profissional</h2>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setProfId(""); setStep(3); }}
+                className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition ${
+                  profId === "" ? "border-gold bg-gold/5" : "border-border hover:border-gold/40"
+                }`}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold"><User className="h-5 w-5" /></div>
+                <div>
+                  <div className="font-medium">Sem preferência</div>
+                  <div className="text-xs text-muted-foreground">Qualquer profissional disponível</div>
+                </div>
+              </button>
+              {profs.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => { setProfId(p.id); setStep(3); }}
+                  className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition ${
+                    profId === p.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/40"
+                  }`}
+                >
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground">
+                    {p.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-medium">{p.name}</div>
+                    {p.specialties && <div className="text-xs text-muted-foreground">{p.specialties}</div>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Step 3 — date and time */}
+        {step === 3 && (
+          <Card className="border-border bg-card p-5">
+            <h2 className="mb-4 font-display text-2xl tracking-wide">Data e horário</h2>
+            <Label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <CalendarDays className="h-3.5 w-3.5" /> Selecione a data
+            </Label>
+            <div className="mb-5 grid grid-cols-4 gap-2 sm:grid-cols-5">
+              {availableDates.slice(0, 20).map((d) => (
+                <button
+                  key={d.date}
+                  disabled={d.closed}
+                  onClick={() => { setDate(d.date); setTime(""); }}
+                  className={`rounded-lg border p-2 text-center text-xs transition ${
+                    d.closed
+                      ? "cursor-not-allowed opacity-30"
+                      : date === d.date
+                      ? "border-gold bg-gold/10 text-gold"
+                      : "border-border hover:border-gold/40"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+
+            {date && (
+              <>
+                <Label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" /> Horários disponíveis
+                </Label>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                  {slots.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => setTime(s)}
+                      className={`rounded-lg border p-2 font-mono text-sm transition ${
+                        time === s ? "border-gold bg-gold/10 text-gold" : "border-border hover:border-gold/40"
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+                {slots.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nenhum horário livre nesta data.</p>
+                )}
+              </>
+            )}
+
+            <Button
+              onClick={() => setStep(4)}
+              disabled={!date || !time}
+              className="mt-5 w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
+            >
+              Próximo
+            </Button>
+          </Card>
+        )}
+
+        {/* Step 4 — client info */}
+        {step === 4 && (
+          <Card className="border-border bg-card p-5">
+            <h2 className="mb-4 font-display text-2xl tracking-wide">Seus dados</h2>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>Nome completo *</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>WhatsApp *</Label>
+                <Input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>E-mail (opcional)</Label>
+                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Observações (opcional)</Label>
+                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: degradê alto" />
+              </div>
+              <label className="flex items-start gap-2 text-sm text-muted-foreground">
+                <Checkbox checked={terms} onCheckedChange={(v) => setTerms(!!v)} className="mt-0.5" />
+                <span>Li e aceito os termos de agendamento</span>
+              </label>
+
+              {/* Resumo */}
+              <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+                <div className="text-muted-foreground">Resumo:</div>
+                <div className="mt-1 space-y-0.5">
+                  <div>✂️ {service?.name} — <span className="text-gold">{brl(Number(service?.price ?? 0))}</span></div>
+                  <div>👤 {prof?.name ?? "Sem preferência"}</div>
+                  <div>📅 {date && formatDateBR(date)} às {time}</div>
+                </div>
+              </div>
+
+              <Button
+                onClick={submit}
+                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10 || !terms}
+                className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
+                size="lg"
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar agendamento"}
+              </Button>
+            </div>
+          </Card>
+        )}
+
+        {/* Step 5 — success */}
+        {step === 5 && created && (
+          <Card className="border-gold/30 bg-gradient-to-br from-gold/10 to-card p-6 text-center md:p-8">
+            <div className="mx-auto mb-4 inline-flex h-20 w-20 animate-in zoom-in items-center justify-center rounded-full bg-success/20 text-success">
+              <Check className="h-10 w-10" />
+            </div>
+            <h1 className="font-display text-3xl tracking-wide">Agendamento confirmado!</h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Você receberá a confirmação pelo WhatsApp em instantes.
+            </p>
+
+            <div className="mt-6 space-y-1.5 rounded-lg border border-border bg-background/40 p-4 text-left text-sm">
+              <div>✂️ <strong>{created.service}</strong></div>
+              <div>👤 {created.prof}</div>
+              <div>📅 {formatDateBR(created.date)} às {created.time}</div>
+              <div>💰 {brl(Number(created.price))}</div>
+              <div className="border-t border-border pt-2 text-muted-foreground">
+                📍 {bs.name}{bs.address ? ` — ${bs.address}` : ""}
+              </div>
+            </div>
+
+            {bs.phone && (
+              <a href={whatsappLink()} target="_blank" rel="noreferrer">
+                <Button className="mt-5 w-full bg-success text-success-foreground hover:opacity-90">
+                  Enviar confirmação no WhatsApp
+                </Button>
+              </a>
+            )}
+            <Button variant="ghost" className="mt-2 w-full" onClick={() => navigate({ to: "/agendar/$slug", params: { slug } })}>
+              Voltar ao início
+            </Button>
+          </Card>
+        )}
+
+        <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
+          Powered by BarberHub
+        </p>
+      </div>
+    </div>
+  );
+}
