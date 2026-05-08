@@ -418,15 +418,8 @@ function PublicBooking() {
               </div>
             </div>
 
-            {bs.phone && (
-              <a href={whatsappLink()} target="_blank" rel="noreferrer">
-                <Button className="mt-5 w-full bg-success text-success-foreground hover:opacity-90">
-                  Enviar confirmação no WhatsApp
-                </Button>
-              </a>
-            )}
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => navigate({ to: "/agendar/$slug", params: { slug } })}>
-              Voltar ao início
+            <Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(0); setServiceId(""); setProfId(""); setDate(""); setTime(""); setName(""); setPhone(""); setEmail(""); setNotes(""); setTerms(false); setCreated(null); }}>
+              Fazer novo agendamento
             </Button>
           </Card>
         )}
