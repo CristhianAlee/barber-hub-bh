@@ -22,9 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2 } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
+import { Checkout } from "@/components/Checkout";
 
 export const Route = createFileRoute("/app/agendamentos")({
   component: AgendamentosPage,
