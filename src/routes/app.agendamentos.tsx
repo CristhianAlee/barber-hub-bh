@@ -145,7 +145,7 @@ function AgendamentosPage() {
   );
 }
 
-function ApptRow({ a, onAction }: any) {
+function ApptRow({ a, onAction, onCheckout }: any) {
   const statusMap: Record<string, { label: string; cls: string }> = {
     pending: { label: "Pendente", cls: "bg-muted text-muted-foreground border-border" },
     confirmed: { label: "Confirmado", cls: "bg-gold/15 text-gold border-gold/30" },
@@ -178,9 +178,9 @@ function ApptRow({ a, onAction }: any) {
           <Button
             size="sm"
             className="bg-success text-success-foreground hover:opacity-90"
-            onClick={() => onAction(a.id, "completed")}
+            onClick={onCheckout}
           >
-            <Check className="mr-1 h-3 w-3" /> Concluir
+            <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && (
