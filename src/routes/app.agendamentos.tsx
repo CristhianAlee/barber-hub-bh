@@ -22,9 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2 } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
+import { Checkout } from "@/components/Checkout";
 
 export const Route = createFileRoute("/app/agendamentos")({
   component: AgendamentosPage,
@@ -45,6 +46,7 @@ function AgendamentosPage() {
   const [appts, setAppts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [checkout, setCheckout] = useState<any>(null);
 
   const load = async () => {
     if (!barbershop) return;
@@ -123,16 +125,27 @@ function AgendamentosPage() {
         ) : (
           <div className="space-y-2">
             {appts.map((a) => (
-              <ApptRow key={a.id} a={a} onAction={updateStatus} />
+              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} />
             ))}
           </div>
         )}
       </Card>
+
+      <Dialog open={!!checkout} onOpenChange={(o) => !o && setCheckout(null)}>
+        <DialogContent className="bg-card max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl tracking-wide">Finalizar atendimento</DialogTitle>
+          </DialogHeader>
+          {checkout && (
+            <Checkout appointment={checkout} onDone={() => { setCheckout(null); load(); }} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function ApptRow({ a, onAction }: any) {
+function ApptRow({ a, onAction, onCheckout }: any) {
   const statusMap: Record<string, { label: string; cls: string }> = {
     pending: { label: "Pendente", cls: "bg-muted text-muted-foreground border-border" },
     confirmed: { label: "Confirmado", cls: "bg-gold/15 text-gold border-gold/30" },
@@ -165,9 +178,9 @@ function ApptRow({ a, onAction }: any) {
           <Button
             size="sm"
             className="bg-success text-success-foreground hover:opacity-90"
-            onClick={() => onAction(a.id, "completed")}
+            onClick={onCheckout}
           >
-            <Check className="mr-1 h-3 w-3" /> Concluir
+            <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && (
