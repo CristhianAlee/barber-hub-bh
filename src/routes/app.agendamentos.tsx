@@ -46,6 +46,7 @@ function AgendamentosPage() {
   const [appts, setAppts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [checkout, setCheckout] = useState<any>(null);
 
   const load = async () => {
     if (!barbershop) return;
