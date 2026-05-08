@@ -131,14 +131,12 @@ function PublicBooking() {
   const submit = async () => {
     if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10 || !terms) return;
 
-    // If "Sem preferência" — pick first active professional
     const finalProfId = profId || profs[0]?.id;
     if (!finalProfId) return toast.error("Nenhum profissional disponível");
 
     setSubmitting(true);
     const phoneDigits = onlyDigits(phone);
 
-    // Find or create client
     const { data: existing } = await supabase
       .from("clients").select("id").eq("barbershop_id", bs.id).eq("phone", phoneDigits).maybeSingle();
     let clientId = existing?.id;
@@ -161,21 +159,21 @@ function PublicBooking() {
       status: "pending",
       notes: notes || null,
     });
-    setSubmitting(false);
-    if (error) return toast.error(error.message);
+    if (error) { setSubmitting(false); return toast.error(error.message); }
+
+    const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";
+    const msg = `✅ *Agendamento Confirmado!*\n\nOlá ${name}! Seu agendamento foi confirmado com sucesso. 💈\n\n✂️ *Serviço:* ${service.name}\n👤 *Profissional:* ${profName}\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time}\n💰 *Valor:* ${brl(Number(service.price))}\n\n📍 *${bs.name}*\n${bs.address ?? ""}\n\nQualquer dúvida entre em contato conosco.\nAté lá! 💈`;
+    const waUrl = `https://wa.me/55${phoneDigits}?text=${encodeURIComponent(msg)}`;
+
+    // Open WhatsApp immediately (must be in user-gesture stack)
+    window.open(waUrl, "_blank");
 
     setCreated({
       service: service.name, price: service.price,
-      prof: profs.find((p) => p.id === finalProfId)?.name ?? "",
-      date, time, name,
+      prof: profName, date, time, name,
     });
+    setSubmitting(false);
     setStep(5);
-  };
-
-  const whatsappLink = () => {
-    if (!bs?.phone || !created) return "#";
-    const msg = `✅ *Agendamento Confirmado!*\n\nOlá ${created.name}!\nMeu agendamento foi confirmado.\n\n✂️ Serviço: ${created.service}\n👤 Profissional: ${created.prof}\n📅 Data: ${formatDateBR(created.date)}\n⏰ Horário: ${created.time}\n💰 Valor: ${brl(Number(created.price))}\n\n📍 ${bs.name}\n${bs.address ?? ""}`;
-    return `https://wa.me/55${bs.phone}?text=${encodeURIComponent(msg)}`;
   };
 
   if (loading) {
