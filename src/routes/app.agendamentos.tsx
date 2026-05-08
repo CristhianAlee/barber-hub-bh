@@ -125,11 +125,22 @@ function AgendamentosPage() {
         ) : (
           <div className="space-y-2">
             {appts.map((a) => (
-              <ApptRow key={a.id} a={a} onAction={updateStatus} />
+              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} />
             ))}
           </div>
         )}
       </Card>
+
+      <Dialog open={!!checkout} onOpenChange={(o) => !o && setCheckout(null)}>
+        <DialogContent className="bg-card max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl tracking-wide">Finalizar atendimento</DialogTitle>
+          </DialogHeader>
+          {checkout && (
+            <Checkout appointment={checkout} onDone={() => { setCheckout(null); load(); }} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
