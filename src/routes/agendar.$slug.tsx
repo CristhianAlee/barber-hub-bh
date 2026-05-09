@@ -405,10 +405,6 @@ function PublicBooking() {
                 <Label>Observações (opcional)</Label>
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: degradê alto" />
               </div>
-              <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                <Checkbox checked={terms} onCheckedChange={(v) => setTerms(!!v)} className="mt-0.5" />
-                <span>Li e aceito os termos de agendamento</span>
-              </label>
 
               {/* Resumo */}
               <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
