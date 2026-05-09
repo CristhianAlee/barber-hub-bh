@@ -202,9 +202,11 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   const { barbershop } = useAuth();
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
+  const [hours, setHours] = useState<any[]>([]);
+  const [busy, setBusy] = useState<{ time: string; duration_minutes: number; professional_id: string }[]>([]);
   const [serviceId, setServiceId] = useState("");
   const [profId, setProfId] = useState("");
-  const [time, setTime] = useState("09:00");
+  const [time, setTime] = useState("");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [notes, setNotes] = useState("");
@@ -213,24 +215,86 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const [s, p] = await Promise.all([
-        supabase.from("services").select("*").eq("barbershop_id", barbershop.id).eq("active", true),
-        supabase.from("professionals").select("*").eq("barbershop_id", barbershop.id).eq("active", true),
+      const [s, p, h] = await Promise.all([
+        supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", barbershop.id).eq("active", true),
+        supabase.from("professionals").select("id, name").eq("barbershop_id", barbershop.id).eq("active", true),
+        supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
       ]);
       setServices(s.data ?? []);
       setProfs(p.data ?? []);
+      setHours(h.data ?? []);
       if (s.data?.[0]) setServiceId(s.data[0].id);
       if (p.data?.[0]) setProfId(p.data[0].id);
     })();
   }, [barbershop]);
 
+  // Load busy times for selected pro+date
+  useEffect(() => {
+    if (!barbershop || !profId) { setBusy([]); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("appointments")
+        .select("time, duration_minutes, professional_id")
+        .eq("barbershop_id", barbershop.id)
+        .eq("date", fmtDate(date))
+        .eq("professional_id", profId)
+        .in("status", ["pending", "confirmed"]);
+      setBusy(data ?? []);
+    })();
+  }, [barbershop, profId, date]);
+
+  // Generate available slots
+  const slots = useMemo(() => {
+    const svc = services.find((s) => s.id === serviceId);
+    if (!barbershop || !svc) return [] as string[];
+    const dow = date.getDay();
+    const h = hours.find((x) => x.day_of_week === dow);
+    if (!h || h.is_closed) return [];
+    const interval = barbershop.booking_interval_minutes ?? 30;
+    const [oh, om] = h.open_time.split(":").map(Number);
+    const [ch, cm] = h.close_time.split(":").map(Number);
+    const start = oh * 60 + om;
+    const end = ch * 60 + cm;
+    const blocked = new Set<number>();
+    busy.forEach((a) => {
+      const [hh, mm] = a.time.split(":").map(Number);
+      const startMin = hh * 60 + mm;
+      for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
+    });
+    const out: string[] = [];
+    for (let t = start; t + svc.duration_minutes <= end; t += interval) {
+      let conflict = false;
+      for (let m = t; m < t + svc.duration_minutes; m++) {
+        if (blocked.has(m)) { conflict = true; break; }
+      }
+      if (!conflict) {
+        out.push(`${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`);
+      }
+    }
+    return out;
+  }, [barbershop, services, serviceId, hours, busy, date]);
+
   const submit = async () => {
-    if (!barbershop || !serviceId || !profId || !name.trim() || onlyDigits(phone).length < 10) {
+    if (!barbershop || !serviceId || !profId || !name.trim() || onlyDigits(phone).length < 10 || !time) {
       toast.error("Preencha todos os campos");
       return;
     }
     setSaving(true);
-    // Find or create client by phone
+
+    // Conflict guard
+    const { data: clash } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("barbershop_id", barbershop.id)
+      .eq("professional_id", profId)
+      .eq("date", fmtDate(date))
+      .eq("time", time)
+      .in("status", ["pending", "confirmed"]);
+    if (clash && clash.length > 0) {
+      setSaving(false);
+      return toast.error("Este horário já está ocupado para este profissional");
+    }
+
     const phoneDigits = onlyDigits(phone);
     const { data: existing } = await supabase
       .from("clients")
@@ -246,6 +310,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
         .select("id")
         .single();
       if (cErr) {
+        console.error("[NewAppt] erro cliente:", cErr);
         setSaving(false);
         return toast.error("Erro ao salvar cliente");
       }
@@ -264,7 +329,10 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       notes: notes || null,
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[NewAppt] erro agendamento:", error);
+      return toast.error(error.message);
+    }
     toast.success("Agendamento criado");
     onCreated();
   };
@@ -290,7 +358,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label>Serviço</Label>
-            <Select value={serviceId} onValueChange={setServiceId}>
+            <Select value={serviceId} onValueChange={(v) => { setServiceId(v); setTime(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {services.map((s) => (
@@ -303,7 +371,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           </div>
           <div className="space-y-1.5">
             <Label>Profissional</Label>
-            <Select value={profId} onValueChange={setProfId}>
+            <Select value={profId} onValueChange={(v) => { setProfId(v); setTime(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {profs.map((p) => (
@@ -314,8 +382,27 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Horário</Label>
-          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          <Label>Horário disponível</Label>
+          {slots.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              Sem horários disponíveis para este profissional nesta data.
+            </p>
+          ) : (
+            <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto">
+              {slots.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setTime(s)}
+                  className={`rounded-md border p-2 font-mono text-sm transition ${
+                    time === s ? "border-gold bg-gold/10 text-gold" : "border-border hover:border-gold/40"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <div className="space-y-1.5">
           <Label>Observações</Label>
@@ -323,7 +410,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
         </div>
         <Button
           onClick={submit}
-          disabled={saving}
+          disabled={saving || !time}
           className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
