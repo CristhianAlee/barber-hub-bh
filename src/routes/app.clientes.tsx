@@ -168,7 +168,7 @@ function ClientesPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate font-medium">{c.name}</span>
-                          {isInactive && (
+                          {inactiveBadge && (
                             <Badge className="border-destructive/40 bg-destructive/15 text-destructive font-normal">
                               Inativo
                             </Badge>
