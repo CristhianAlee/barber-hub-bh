@@ -144,8 +144,7 @@ function Signup() {
             className="mt-0.5"
           />
           <span>
-            Aceito os <a className="text-gold hover:underline" href="#">termos de uso</a> e{" "}
-            <a className="text-gold hover:underline" href="#">política de privacidade</a>
+            Aceito os termos de uso e política de privacidade do BarberHub
           </span>
         </label>
 
