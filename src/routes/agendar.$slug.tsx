@@ -36,7 +36,7 @@ function PublicBooking() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [terms, setTerms] = useState(false);
+  
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
 
