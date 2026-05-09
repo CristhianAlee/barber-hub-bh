@@ -236,10 +236,11 @@ function ProfessionalsTab() {
   useEffect(() => { load(); }, [barbershop]); // eslint-disable-line
 
   const add = async () => {
-    if (!name.trim() || !barbershop) return;
+    if (!name.trim() || !barbershop) return toast.error("Informe o nome");
+    if (phone.replace(/\D/g, "").length < 10) return toast.error("Telefone obrigatório");
     const { error } = await supabase
       .from("professionals")
-      .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") || null });
+      .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") });
     if (error) return toast.error(error.message);
     setName(""); setPhone("");
     load();
