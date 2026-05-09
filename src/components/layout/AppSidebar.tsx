@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -8,6 +9,7 @@ import {
   Settings,
   LogOut,
   Scissors,
+  Loader2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
