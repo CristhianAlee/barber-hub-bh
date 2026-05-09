@@ -27,6 +27,13 @@ const items = [
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { barbershop, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut();
+  };
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground">
