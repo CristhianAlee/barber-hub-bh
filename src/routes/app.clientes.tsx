@@ -155,7 +155,7 @@ function ClientesPage() {
               <div className="space-y-1">
                 {filtered.map((c) => {
                   const days = daysSince(c.last_visit);
-                  const isInactive = days > DAYS_INACTIVE;
+                  const inactiveBadge = isInactive(c);
                   return (
                     <button
                       key={c.id}
