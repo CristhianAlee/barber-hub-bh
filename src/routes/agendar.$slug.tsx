@@ -42,18 +42,31 @@ function PublicBooking() {
 
   useEffect(() => {
     (async () => {
-      const { data: b } = await supabase.from("barbershops").select("*").eq("slug", slug).maybeSingle();
-      if (!b) { setLoading(false); return; }
-      setBs(b);
-      const [s, p, h] = await Promise.all([
-        supabase.from("services").select("*").eq("barbershop_id", b.id).eq("active", true).order("price"),
-        supabase.from("professionals").select("*").eq("barbershop_id", b.id).eq("active", true),
-        supabase.from("business_hours").select("*").eq("barbershop_id", b.id),
-      ]);
-      setServices(s.data ?? []);
-      setProfs(p.data ?? []);
-      setHours(h.data ?? []);
-      setLoading(false);
+      try {
+        const { data: b, error: bErr } = await supabase
+          .from("barbershops")
+          .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (bErr) console.error("[Agendar] erro barbearia:", bErr);
+        if (!b) { setLoading(false); return; }
+        setBs(b);
+        const [s, p, h] = await Promise.all([
+          supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          supabase.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+        ]);
+        if (s.error) console.error("[Agendar] erro serviços:", s.error);
+        if (p.error) console.error("[Agendar] erro profissionais:", p.error);
+        if (h.error) console.error("[Agendar] erro horários:", h.error);
+        setServices(s.data ?? []);
+        setProfs(p.data ?? []);
+        setHours(h.data ?? []);
+      } catch (e) {
+        console.error("[Agendar] erro carregar:", e);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [slug]);
 
