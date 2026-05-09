@@ -418,7 +418,7 @@ function PublicBooking() {
 
               <Button
                 onClick={submit}
-                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10 || !terms}
+                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10}
                 className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
                 size="lg"
               >
