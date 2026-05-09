@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -8,6 +9,7 @@ import {
   Settings,
   LogOut,
   Scissors,
+  Loader2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
@@ -25,6 +27,13 @@ const items = [
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { barbershop, signOut } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    await signOut();
+  };
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground">
@@ -74,11 +83,16 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
       <div className="border-t border-sidebar-border p-3">
         <Button
           variant="ghost"
-          onClick={signOut}
+          onClick={handleSignOut}
+          disabled={signingOut}
           className="w-full justify-start text-muted-foreground hover:text-destructive"
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sair
+          {signingOut ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <LogOut className="mr-2 h-4 w-4" />
+          )}
+          {signingOut ? "Saindo..." : "Sair"}
         </Button>
       </div>
     </aside>

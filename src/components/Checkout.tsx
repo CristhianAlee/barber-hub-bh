@@ -57,80 +57,99 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
 
   const finalize = async () => {
     setSubmitting(true);
+    try {
+      // 1. Create sale
+      const { data: sale, error: saleErr } = await supabase
+        .from("sales")
+        .insert({
+          barbershop_id: appointment.barbershop_id,
+          client_id: appointment.client_id,
+          professional_id: appointment.professional_id,
+          appointment_id: appointment.id,
+          payment_method: payment,
+          total_amount: total,
+        })
+        .select("id")
+        .single();
+      if (saleErr || !sale) {
+        console.error("[Checkout] Falha ao criar venda:", saleErr);
+        setSubmitting(false);
+        return toast.error(`Erro ao registrar venda: ${saleErr?.message ?? "desconhecido"}`);
+      }
 
-    // 1. Create sale
-    const { data: sale, error: saleErr } = await supabase
-      .from("sales")
-      .insert({
-        barbershop_id: appointment.barbershop_id,
-        client_id: appointment.client_id,
-        professional_id: appointment.professional_id,
-        appointment_id: appointment.id,
-        payment_method: payment,
-        total_amount: total,
-      })
-      .select("id")
-      .single();
-    if (saleErr || !sale) { setSubmitting(false); return toast.error("Erro ao registrar venda"); }
-
-    // 2. Create sale_items
-    const items: any[] = [];
-    if (baseService) {
-      items.push({
-        sale_id: sale.id, type: "service", item_id: appointment.service_id,
-        name: baseService.name, quantity: 1, unit_price: Number(baseService.price),
+      // 2. Create sale_items
+      const items: any[] = [];
+      if (baseService) {
+        items.push({
+          sale_id: sale.id, type: "service", item_id: appointment.service_id,
+          name: baseService.name, quantity: 1, unit_price: Number(baseService.price),
+        });
+      }
+      services.filter((s) => extraServices.has(s.id)).forEach((s) => {
+        items.push({ sale_id: sale.id, type: "service", item_id: s.id, name: s.name, quantity: 1, unit_price: Number(s.price) });
       });
-    }
-    services.filter((s) => extraServices.has(s.id)).forEach((s) => {
-      items.push({ sale_id: sale.id, type: "service", item_id: s.id, name: s.name, quantity: 1, unit_price: Number(s.price) });
-    });
-    products.forEach((p) => {
-      const q = orderbumpProducts.get(p.id) ?? 0;
-      if (q > 0) items.push({ sale_id: sale.id, type: "product", item_id: p.id, name: p.name, quantity: q, unit_price: Number(p.price) });
-    });
-    if (items.length > 0) await supabase.from("sale_items").insert(items);
-
-    // 3. Financial entry
-    await supabase.from("financial_entries").insert({
-      barbershop_id: appointment.barbershop_id,
-      type: "income",
-      category: "Atendimento",
-      description: `${appointment.clients?.name ?? "Cliente"} — ${baseService?.name ?? ""}`,
-      amount: total,
-      date: new Date().toISOString().slice(0, 10),
-      payment_method: payment,
-      sale_id: sale.id,
-    });
-
-    // 4. Stock decrement
-    await Promise.all(
-      products.map(async (p) => {
+      products.forEach((p) => {
         const q = orderbumpProducts.get(p.id) ?? 0;
-        if (q > 0) {
-          await supabase.from("products").update({ stock_quantity: p.stock_quantity - q }).eq("id", p.id);
-          await supabase.from("stock_movements").insert({ product_id: p.id, type: "out", quantity: q, reason: "Venda no atendimento" });
-        }
-      })
-    );
+        if (q > 0) items.push({ sale_id: sale.id, type: "product", item_id: p.id, name: p.name, quantity: q, unit_price: Number(p.price) });
+      });
+      if (items.length > 0) {
+        const { error: itemsErr } = await supabase.from("sale_items").insert(items);
+        if (itemsErr) console.error("[Checkout] Falha ao salvar itens:", itemsErr);
+      }
 
-    // 5. Update appointment
-    await supabase.from("appointments").update({ status: "completed" }).eq("id", appointment.id);
+      // 3. Financial entry
+      const { error: finErr } = await supabase.from("financial_entries").insert({
+        barbershop_id: appointment.barbershop_id,
+        type: "income",
+        category: "Atendimento",
+        description: `${appointment.clients?.name ?? "Cliente"} — ${baseService?.name ?? ""}`,
+        amount: total,
+        date: new Date().toISOString().slice(0, 10),
+        payment_method: payment,
+        sale_id: sale.id,
+      });
+      if (finErr) console.error("[Checkout] Falha ao lançar no financeiro:", finErr);
 
-    // 6. Update client totals
-    const { data: client } = await supabase
-      .from("clients").select("total_visits, total_spent")
-      .eq("id", appointment.client_id).maybeSingle();
-    if (client) {
-      await supabase.from("clients").update({
-        total_visits: (client.total_visits ?? 0) + 1,
-        total_spent: Number(client.total_spent ?? 0) + total,
-        last_visit: new Date().toISOString(),
-      }).eq("id", appointment.client_id);
+      // 4. Stock decrement
+      await Promise.all(
+        products.map(async (p) => {
+          const q = orderbumpProducts.get(p.id) ?? 0;
+          if (q > 0) {
+            const { error: stockErr } = await supabase.from("products")
+              .update({ stock_quantity: p.stock_quantity - q }).eq("id", p.id);
+            if (stockErr) console.error("[Checkout] Falha ao baixar estoque:", stockErr);
+            await supabase.from("stock_movements").insert({
+              product_id: p.id, type: "out", quantity: q, reason: "Venda no atendimento",
+            });
+          }
+        })
+      );
+
+      // 5. Update appointment
+      const { error: apptErr } = await supabase.from("appointments")
+        .update({ status: "completed" }).eq("id", appointment.id);
+      if (apptErr) console.error("[Checkout] Falha ao concluir agendamento:", apptErr);
+
+      // 6. Update client totals
+      const { data: client } = await supabase
+        .from("clients").select("total_visits, total_spent")
+        .eq("id", appointment.client_id).maybeSingle();
+      if (client) {
+        await supabase.from("clients").update({
+          total_visits: (client.total_visits ?? 0) + 1,
+          total_spent: Number(client.total_spent ?? 0) + total,
+          last_visit: new Date().toISOString(),
+        }).eq("id", appointment.client_id);
+      }
+
+      toast.success(`Atendimento finalizado — ${brl(total)}`);
+      onDone();
+    } catch (err: any) {
+      console.error("[Checkout] Erro inesperado:", err);
+      toast.error(`Erro inesperado: ${err?.message ?? "tente novamente"}`);
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
-    toast.success(`Atendimento finalizado — ${brl(total)}`);
-    onDone();
   };
 
   const togglePayment = (m: PaymentMethod) => setPayment(m);

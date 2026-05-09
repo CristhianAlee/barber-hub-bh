@@ -40,6 +40,7 @@ function daysSince(iso: string | null) {
 function ClientesPage() {
   const { barbershop } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
+  const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Client | null>(null);
@@ -50,16 +51,36 @@ function ClientesPage() {
   const load = async () => {
     if (!barbershop) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("clients")
-      .select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at")
-      .eq("barbershop_id", barbershop.id)
-      .order("name");
-    setClients((data as Client[]) ?? []);
+    const since = new Date(Date.now() - DAYS_INACTIVE * 86400000).toISOString().slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+    const [c, recent] = await Promise.all([
+      supabase
+        .from("clients")
+        .select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at")
+        .eq("barbershop_id", barbershop.id)
+        .order("name"),
+      // Active = has confirmed/completed appt within last 30d OR any future pending/confirmed
+      supabase
+        .from("appointments")
+        .select("client_id, date, status")
+        .eq("barbershop_id", barbershop.id)
+        .in("status", ["pending", "confirmed", "completed"])
+        .gte("date", since),
+    ]);
+    setClients((c.data as Client[]) ?? []);
+    const set = new Set<string>();
+    (recent.data ?? []).forEach((a: any) => {
+      if (a.status === "completed" || a.status === "confirmed" || (a.status === "pending" && a.date >= today)) {
+        set.add(a.client_id);
+      }
+    });
+    setActiveIds(set);
     setLoading(false);
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [barbershop]);
+
+  const isInactive = (c: Client) => !activeIds.has(c.id) && daysSince(c.last_visit) > DAYS_INACTIVE;
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -70,8 +91,8 @@ function ClientesPage() {
   }, [clients, search]);
 
   const inactive = useMemo(
-    () => clients.filter((c) => daysSince(c.last_visit) > DAYS_INACTIVE),
-    [clients]
+    () => clients.filter((c) => isInactive(c)),
+    [clients, activeIds]
   );
 
   const publicLink =
@@ -134,7 +155,7 @@ function ClientesPage() {
               <div className="space-y-1">
                 {filtered.map((c) => {
                   const days = daysSince(c.last_visit);
-                  const isInactive = days > DAYS_INACTIVE;
+                  const inactiveBadge = isInactive(c);
                   return (
                     <button
                       key={c.id}
@@ -147,7 +168,7 @@ function ClientesPage() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="truncate font-medium">{c.name}</span>
-                          {isInactive && (
+                          {inactiveBadge && (
                             <Badge className="border-destructive/40 bg-destructive/15 text-destructive font-normal">
                               Inativo
                             </Badge>

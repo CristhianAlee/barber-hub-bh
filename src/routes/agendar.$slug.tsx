@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { Logo } from "@/components/Logo";
 import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
 import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
@@ -36,24 +36,37 @@ function PublicBooking() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [terms, setTerms] = useState(false);
+  
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
-      const { data: b } = await supabase.from("barbershops").select("*").eq("slug", slug).maybeSingle();
-      if (!b) { setLoading(false); return; }
-      setBs(b);
-      const [s, p, h] = await Promise.all([
-        supabase.from("services").select("*").eq("barbershop_id", b.id).eq("active", true).order("price"),
-        supabase.from("professionals").select("*").eq("barbershop_id", b.id).eq("active", true),
-        supabase.from("business_hours").select("*").eq("barbershop_id", b.id),
-      ]);
-      setServices(s.data ?? []);
-      setProfs(p.data ?? []);
-      setHours(h.data ?? []);
-      setLoading(false);
+      try {
+        const { data: b, error: bErr } = await supabase
+          .from("barbershops")
+          .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
+          .eq("slug", slug)
+          .maybeSingle();
+        if (bErr) console.error("[Agendar] erro barbearia:", bErr);
+        if (!b) { setLoading(false); return; }
+        setBs(b);
+        const [s, p, h] = await Promise.all([
+          supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          supabase.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+        ]);
+        if (s.error) console.error("[Agendar] erro serviços:", s.error);
+        if (p.error) console.error("[Agendar] erro profissionais:", p.error);
+        if (h.error) console.error("[Agendar] erro horários:", h.error);
+        setServices(s.data ?? []);
+        setProfs(p.data ?? []);
+        setHours(h.data ?? []);
+      } catch (e) {
+        console.error("[Agendar] erro carregar:", e);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [slug]);
 
@@ -129,12 +142,28 @@ function PublicBooking() {
   }, [bs, date, service, profId, hours]);
 
   const submit = async () => {
-    if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10 || !terms) return;
+    if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10) return;
 
     const finalProfId = profId || profs[0]?.id;
     if (!finalProfId) return toast.error("Nenhum profissional disponível");
 
     setSubmitting(true);
+
+    // Double-booking guard
+    const { data: clash } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("barbershop_id", bs.id)
+      .eq("professional_id", finalProfId)
+      .eq("date", date)
+      .eq("time", time)
+      .in("status", ["pending", "confirmed"]);
+    if (clash && clash.length > 0) {
+      setSubmitting(false);
+      setTime("");
+      return toast.error("Este horário acabou de ser preenchido. Escolha outro.");
+    }
+
     const phoneDigits = onlyDigits(phone);
 
     const { data: existing } = await supabase
@@ -145,7 +174,11 @@ function PublicBooking() {
         .from("clients")
         .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
         .select("id").single();
-      if (error) { setSubmitting(false); return toast.error("Erro ao salvar"); }
+      if (error) {
+        console.error("[Agendar] erro cliente:", error);
+        setSubmitting(false);
+        return toast.error("Erro ao salvar cliente");
+      }
       clientId = nc.id;
     }
 
@@ -159,13 +192,15 @@ function PublicBooking() {
       status: "pending",
       notes: notes || null,
     });
-    if (error) { setSubmitting(false); return toast.error(error.message); }
+    if (error) {
+      console.error("[Agendar] erro agendamento:", error);
+      setSubmitting(false);
+      return toast.error(error.message);
+    }
 
     const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";
     const msg = `✅ *Agendamento Confirmado!*\n\nOlá ${name}! Seu agendamento foi confirmado com sucesso. 💈\n\n✂️ *Serviço:* ${service.name}\n👤 *Profissional:* ${profName}\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time}\n💰 *Valor:* ${brl(Number(service.price))}\n\n📍 *${bs.name}*\n${bs.address ?? ""}\n\nQualquer dúvida entre em contato conosco.\nAté lá! 💈`;
     const waUrl = `https://wa.me/55${phoneDigits}?text=${encodeURIComponent(msg)}`;
-
-    // Open WhatsApp immediately (must be in user-gesture stack)
     window.open(waUrl, "_blank");
 
     setCreated({
@@ -370,10 +405,6 @@ function PublicBooking() {
                 <Label>Observações (opcional)</Label>
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: degradê alto" />
               </div>
-              <label className="flex items-start gap-2 text-sm text-muted-foreground">
-                <Checkbox checked={terms} onCheckedChange={(v) => setTerms(!!v)} className="mt-0.5" />
-                <span>Li e aceito os termos de agendamento</span>
-              </label>
 
               {/* Resumo */}
               <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
@@ -387,7 +418,7 @@ function PublicBooking() {
 
               <Button
                 onClick={submit}
-                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10 || !terms}
+                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10}
                 className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
                 size="lg"
               >
@@ -418,7 +449,7 @@ function PublicBooking() {
               </div>
             </div>
 
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(0); setServiceId(""); setProfId(""); setDate(""); setTime(""); setName(""); setPhone(""); setEmail(""); setNotes(""); setTerms(false); setCreated(null); }}>
+            <Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(0); setServiceId(""); setProfId(""); setDate(""); setTime(""); setName(""); setPhone(""); setEmail(""); setNotes(""); setCreated(null); }}>
               Fazer novo agendamento
             </Button>
           </Card>

@@ -70,7 +70,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (user) await loadBarbershop(user.id);
         },
         signOut: async () => {
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (e) {
+            console.error("[Auth] signOut error:", e);
+          }
+          setUser(null);
+          setSession(null);
+          setBarbershop(null);
+          if (typeof window !== "undefined") {
+            try {
+              Object.keys(localStorage)
+                .filter((k) => k.startsWith("sb-"))
+                .forEach((k) => localStorage.removeItem(k));
+            } catch {}
+            window.location.href = "/auth/login";
+          }
         },
       }}
     >
