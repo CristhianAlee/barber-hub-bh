@@ -449,7 +449,7 @@ function PublicBooking() {
               </div>
             </div>
 
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(0); setServiceId(""); setProfId(""); setDate(""); setTime(""); setName(""); setPhone(""); setEmail(""); setNotes(""); setTerms(false); setCreated(null); }}>
+            <Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(0); setServiceId(""); setProfId(""); setDate(""); setTime(""); setName(""); setPhone(""); setEmail(""); setNotes(""); setCreated(null); }}>
               Fazer novo agendamento
             </Button>
           </Card>
