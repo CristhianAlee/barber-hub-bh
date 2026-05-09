@@ -142,12 +142,28 @@ function PublicBooking() {
   }, [bs, date, service, profId, hours]);
 
   const submit = async () => {
-    if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10 || !terms) return;
+    if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10) return;
 
     const finalProfId = profId || profs[0]?.id;
     if (!finalProfId) return toast.error("Nenhum profissional disponível");
 
     setSubmitting(true);
+
+    // Double-booking guard
+    const { data: clash } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("barbershop_id", bs.id)
+      .eq("professional_id", finalProfId)
+      .eq("date", date)
+      .eq("time", time)
+      .in("status", ["pending", "confirmed"]);
+    if (clash && clash.length > 0) {
+      setSubmitting(false);
+      setTime("");
+      return toast.error("Este horário acabou de ser preenchido. Escolha outro.");
+    }
+
     const phoneDigits = onlyDigits(phone);
 
     const { data: existing } = await supabase
@@ -158,7 +174,11 @@ function PublicBooking() {
         .from("clients")
         .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
         .select("id").single();
-      if (error) { setSubmitting(false); return toast.error("Erro ao salvar"); }
+      if (error) {
+        console.error("[Agendar] erro cliente:", error);
+        setSubmitting(false);
+        return toast.error("Erro ao salvar cliente");
+      }
       clientId = nc.id;
     }
 
@@ -172,13 +192,15 @@ function PublicBooking() {
       status: "pending",
       notes: notes || null,
     });
-    if (error) { setSubmitting(false); return toast.error(error.message); }
+    if (error) {
+      console.error("[Agendar] erro agendamento:", error);
+      setSubmitting(false);
+      return toast.error(error.message);
+    }
 
     const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";
     const msg = `✅ *Agendamento Confirmado!*\n\nOlá ${name}! Seu agendamento foi confirmado com sucesso. 💈\n\n✂️ *Serviço:* ${service.name}\n👤 *Profissional:* ${profName}\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time}\n💰 *Valor:* ${brl(Number(service.price))}\n\n📍 *${bs.name}*\n${bs.address ?? ""}\n\nQualquer dúvida entre em contato conosco.\nAté lá! 💈`;
     const waUrl = `https://wa.me/55${phoneDigits}?text=${encodeURIComponent(msg)}`;
-
-    // Open WhatsApp immediately (must be in user-gesture stack)
     window.open(waUrl, "_blank");
 
     setCreated({
