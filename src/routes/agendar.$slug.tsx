@@ -351,7 +351,7 @@ function PublicBooking() {
                   <div className="text-xs text-muted-foreground">Qualquer profissional disponível</div>
                 </div>
               </button>
-              {profs.map((p) => (
+              {professionalsForService.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { setProfId(p.id); setStep(3); }}
@@ -368,6 +368,11 @@ function PublicBooking() {
                   </div>
                 </button>
               ))}
+              {professionalsForService.length === 0 && (
+                <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                  Nenhum profissional realiza este serviço no momento.
+                </p>
+              )}
             </div>
           </Card>
         )}
@@ -417,7 +422,9 @@ function PublicBooking() {
                   ))}
                 </div>
                 {slots.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nenhum horário livre nesta data.</p>
+                  <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                    Nenhum horário disponível para esta data. Escolha outro dia ou profissional.
+                  </p>
                 )}
               </>
             )}
