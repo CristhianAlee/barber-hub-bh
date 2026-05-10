@@ -176,12 +176,12 @@ function Dashboard() {
         </Card>
 
         {/* Public link card */}
-        <Card className="border-gold/30 bg-gradient-to-br from-gold/10 to-transparent p-5">
+        <Card className="min-w-0 border-gold/30 bg-gradient-to-br from-gold/10 to-transparent p-5">
           <h3 className="font-display text-lg tracking-wide text-gold">Link de agendamento</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Compartilhe este link com seus clientes. Eles agendam sozinhos, sem precisar criar conta.
           </p>
-          <div className="mt-4 break-all rounded-md bg-background/60 p-3 font-mono text-xs">
+          <div className="mt-4 truncate rounded-md bg-background/60 p-3 font-mono text-xs" title={publicUrl}>
             {publicUrl}
           </div>
           <Button

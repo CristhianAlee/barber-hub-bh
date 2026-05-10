@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useState } from "react";
+import { supabasePublic } from "@/integrations/supabase/public-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,10 @@ export const Route = createFileRoute("/agendar/$slug")({
 
 const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const timeToMinutes = (value: string) => {
+  const [hh, mm] = value.split(":").map(Number);
+  return hh * 60 + mm;
+};
 
 function PublicBooking() {
   const { slug } = useParams({ from: "/agendar/$slug" });
@@ -25,6 +29,8 @@ function PublicBooking() {
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
+  const [professionalHours, setProfessionalHours] = useState<any[]>([]);
+  const [professionalServices, setProfessionalServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [step, setStep] = useState(0); // 0 welcome, 1 service, 2 prof, 3 date/time, 4 details, 5 done
@@ -43,7 +49,7 @@ function PublicBooking() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: b, error: bErr } = await supabase
+        const { data: b, error: bErr } = await supabasePublic
           .from("barbershops")
           .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
           .eq("slug", slug)
@@ -51,10 +57,12 @@ function PublicBooking() {
         if (bErr) console.error("[Agendar] erro barbearia:", bErr);
         if (!b) { setLoading(false); return; }
         setBs(b);
-        const [s, p, h] = await Promise.all([
-          supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
-          supabase.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
-          supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+        const [s, p, h, ph, ps] = await Promise.all([
+          supabasePublic.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          supabasePublic.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          supabasePublic.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabasePublic.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabasePublic.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
         ]);
         if (s.error) console.error("[Agendar] erro serviços:", s.error);
         if (p.error) console.error("[Agendar] erro profissionais:", p.error);
@@ -62,6 +70,8 @@ function PublicBooking() {
         setServices(s.data ?? []);
         setProfs(p.data ?? []);
         setHours(h.data ?? []);
+        setProfessionalHours(ph.data ?? []);
+        setProfessionalServices(ps.data ?? []);
       } catch (e) {
         console.error("[Agendar] erro carregar:", e);
       } finally {
@@ -72,6 +82,15 @@ function PublicBooking() {
 
   const service = services.find((s) => s.id === serviceId);
   const prof = profs.find((p) => p.id === profId);
+  const professionalsForService = useMemo(
+    () => serviceId
+      ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
+      : profs,
+    [profs, professionalServices, serviceId],
+  );
+  const getHoursForProfessional = (professionalId: string, dow: number) =>
+    professionalHours.find((x) => x.professional_id === professionalId && x.day_of_week === dow) ??
+    hours.find((x) => x.day_of_week === dow);
 
   // Generate available dates (next N days)
   const availableDates: { date: string; label: string; closed: boolean }[] = [];
@@ -94,95 +113,116 @@ function PublicBooking() {
     if (!bs || !date || !service) { setSlots([]); return; }
     (async () => {
       const dow = new Date(date + "T00:00:00").getDay();
-      const h = hours.find((x) => x.day_of_week === dow);
-      if (!h || h.is_closed) { setSlots([]); return; }
+      const candidateProfs = profId
+        ? professionalsForService.filter((p) => p.id === profId)
+        : professionalsForService;
+      if (candidateProfs.length === 0) { setSlots([]); return; }
 
       const interval = bs.booking_interval_minutes ?? 30;
-      const [oh, om] = h.open_time.split(":").map(Number);
-      const [ch, cm] = h.close_time.split(":").map(Number);
-      const start = oh * 60 + om;
-      const end = ch * 60 + cm;
 
       // Get existing appointments for this date
-      let q = supabase
+      const { data: existing } = await supabasePublic
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
         .eq("date", date)
-        .in("status", ["pending", "confirmed"]);
-      if (profId) q = q.eq("professional_id", profId);
-      const { data: existing } = await q;
+        .neq("status", "cancelled");
 
-      const blocked = new Set<number>();
-      (existing ?? []).forEach((a: any) => {
-        const [hh, mm] = a.time.split(":").map(Number);
-        const startMin = hh * 60 + mm;
-        for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
-      });
-
-      const out: string[] = [];
+      const out = new Set<string>();
       const now = new Date();
       const isToday = date === fmtDate(now);
       const nowMin = now.getHours() * 60 + now.getMinutes();
 
-      for (let t = start; t + service.duration_minutes <= end; t += interval) {
-        if (isToday && t <= nowMin) continue;
-        let conflict = false;
-        for (let m = t; m < t + service.duration_minutes; m++) {
-          if (blocked.has(m)) { conflict = true; break; }
+      candidateProfs.forEach((candidate) => {
+        const h = getHoursForProfessional(candidate.id, dow);
+        if (!h || h.is_closed) return;
+        const [oh, om] = h.open_time.split(":").map(Number);
+        const [ch, cm] = h.close_time.split(":").map(Number);
+        const start = oh * 60 + om;
+        const end = ch * 60 + cm;
+        const blocked = new Set<number>();
+        (existing ?? []).filter((a: any) => a.professional_id === candidate.id).forEach((a: any) => {
+          const [hh, mm] = a.time.split(":").map(Number);
+          const startMin = hh * 60 + mm;
+          for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
+        });
+        for (let t = start; t + service.duration_minutes <= end; t += interval) {
+          if (isToday && t <= nowMin) continue;
+          let conflict = false;
+          for (let m = t; m < t + service.duration_minutes; m++) {
+            if (blocked.has(m)) { conflict = true; break; }
+          }
+          if (!conflict) {
+            const hh = String(Math.floor(t / 60)).padStart(2, "0");
+            const mm = String(t % 60).padStart(2, "0");
+            out.add(`${hh}:${mm}`);
+          }
         }
-        if (!conflict) {
-          const hh = String(Math.floor(t / 60)).padStart(2, "0");
-          const mm = String(t % 60).padStart(2, "0");
-          out.push(`${hh}:${mm}`);
-        }
-      }
-      setSlots(out);
+      });
+      setSlots(Array.from(out).sort());
     })();
-  }, [bs, date, service, profId, hours]);
+  }, [bs, date, service, profId, hours, professionalHours, professionalsForService]);
 
   const submit = async () => {
     if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10) return;
 
-    const finalProfId = profId || profs[0]?.id;
+    let finalProfId = profId;
+    if (!finalProfId) {
+      const dow = new Date(date + "T00:00:00").getDay();
+      const { data: existing } = await supabasePublic
+        .from("appointments")
+        .select("time, duration_minutes, professional_id")
+        .eq("barbershop_id", bs.id)
+        .eq("date", date)
+        .neq("status", "cancelled");
+      finalProfId = professionalsForService.find((candidate) => {
+        const h = getHoursForProfessional(candidate.id, dow);
+        if (!h || h.is_closed) return false;
+        const start = timeToMinutes(time);
+        const open = timeToMinutes(h.open_time);
+        const close = timeToMinutes(h.close_time);
+        if (start < open || start + service.duration_minutes > close) return false;
+        return !(existing ?? []).filter((a: any) => a.professional_id === candidate.id).some((a: any) => {
+          const apptStart = timeToMinutes(a.time);
+          const apptEnd = apptStart + (a.duration_minutes ?? 30);
+          return start < apptEnd && start + service.duration_minutes > apptStart;
+        });
+      })?.id ?? "";
+    }
     if (!finalProfId) return toast.error("Nenhum profissional disponível");
 
     setSubmitting(true);
 
     // Double-booking guard
-    const { data: clash } = await supabase
+    const { data: clash } = await supabasePublic
       .from("appointments")
       .select("id")
       .eq("barbershop_id", bs.id)
       .eq("professional_id", finalProfId)
       .eq("date", date)
       .eq("time", time)
-      .in("status", ["pending", "confirmed"]);
+      .neq("status", "cancelled");
     if (clash && clash.length > 0) {
       setSubmitting(false);
       setTime("");
-      return toast.error("Este horário acabou de ser preenchido. Escolha outro.");
+      return toast.error("Horário já ocupado, escolha outro");
     }
 
     const phoneDigits = onlyDigits(phone);
 
-    const { data: existing } = await supabase
-      .from("clients").select("id").eq("barbershop_id", bs.id).eq("phone", phoneDigits).maybeSingle();
-    let clientId = existing?.id;
-    if (!clientId) {
-      const { data: nc, error } = await supabase
-        .from("clients")
-        .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
-        .select("id").single();
-      if (error) {
-        console.error("[Agendar] erro cliente:", error);
-        setSubmitting(false);
-        return toast.error("Erro ao salvar cliente");
-      }
-      clientId = nc.id;
+    const { data: nc, error: clientError } = await supabasePublic
+      .from("clients")
+      .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
+      .select("id")
+      .single();
+    if (clientError || !nc) {
+      console.error("[Agendar] erro cliente:", clientError);
+      setSubmitting(false);
+      return toast.error("Erro ao salvar cliente");
     }
+    const clientId = nc.id;
 
-    const { error } = await supabase.from("appointments").insert({
+    const { error } = await supabasePublic.from("appointments").insert({
       barbershop_id: bs.id,
       professional_id: finalProfId,
       client_id: clientId,
@@ -195,6 +235,10 @@ function PublicBooking() {
     if (error) {
       console.error("[Agendar] erro agendamento:", error);
       setSubmitting(false);
+      if (error.code === "23505") {
+        setTime("");
+        return toast.error("Horário já ocupado, escolha outro");
+      }
       return toast.error(error.message);
     }
 
@@ -303,7 +347,7 @@ function PublicBooking() {
                   <div className="text-xs text-muted-foreground">Qualquer profissional disponível</div>
                 </div>
               </button>
-              {profs.map((p) => (
+              {professionalsForService.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => { setProfId(p.id); setStep(3); }}
@@ -320,6 +364,11 @@ function PublicBooking() {
                   </div>
                 </button>
               ))}
+              {professionalsForService.length === 0 && (
+                <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                  Nenhum profissional realiza este serviço no momento.
+                </p>
+              )}
             </div>
           </Card>
         )}
@@ -369,7 +418,9 @@ function PublicBooking() {
                   ))}
                 </div>
                 {slots.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Nenhum horário livre nesta data.</p>
+                  <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
+                    Nenhum horário disponível para esta data. Escolha outro dia ou profissional.
+                  </p>
                 )}
               </>
             )}

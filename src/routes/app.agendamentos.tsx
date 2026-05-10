@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
 import { Checkout } from "@/components/Checkout";
@@ -47,6 +47,7 @@ function AgendamentosPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [checkout, setCheckout] = useState<any>(null);
+  const [reschedule, setReschedule] = useState<any>(null);
 
   const load = async () => {
     if (!barbershop) return;
@@ -125,7 +126,7 @@ function AgendamentosPage() {
         ) : (
           <div className="space-y-2">
             {appts.map((a) => (
-              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} />
+              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} onReschedule={() => setReschedule(a)} />
             ))}
           </div>
         )}
@@ -141,11 +142,22 @@ function AgendamentosPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!reschedule} onOpenChange={(o) => !o && setReschedule(null)}>
+        <DialogContent className="bg-card">
+          {reschedule && (
+            <RescheduleDialog
+              appointment={reschedule}
+              onDone={() => { setReschedule(null); load(); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function ApptRow({ a, onAction, onCheckout }: any) {
+function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
   const statusMap: Record<string, { label: string; cls: string }> = {
     pending: { label: "Pendente", cls: "bg-muted text-muted-foreground border-border" },
     confirmed: { label: "Confirmado", cls: "bg-gold/15 text-gold border-gold/30" },
@@ -184,6 +196,11 @@ function ApptRow({ a, onAction, onCheckout }: any) {
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && (
+          <Button size="sm" variant="outline" onClick={onReschedule}>
+            <CalendarClock className="mr-1 h-3 w-3" /> Reagendar
+          </Button>
+        )}
+        {a.status !== "cancelled" && a.status !== "completed" && (
           <Button
             size="sm"
             variant="outline"
@@ -203,6 +220,8 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
+  const [professionalHours, setProfessionalHours] = useState<any[]>([]);
+  const [professionalServices, setProfessionalServices] = useState<any[]>([]);
   const [busy, setBusy] = useState<{ time: string; duration_minutes: number; professional_id: string }[]>([]);
   const [serviceId, setServiceId] = useState("");
   const [profId, setProfId] = useState("");
@@ -215,14 +234,18 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const [s, p, h] = await Promise.all([
+      const [s, p, h, ph, ps] = await Promise.all([
         supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", barbershop.id).eq("active", true),
         supabase.from("professionals").select("id, name").eq("barbershop_id", barbershop.id).eq("active", true),
         supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+        supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+        supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", barbershop.id),
       ]);
       setServices(s.data ?? []);
       setProfs(p.data ?? []);
       setHours(h.data ?? []);
+      setProfessionalHours(ph.data ?? []);
+      setProfessionalServices(ps.data ?? []);
       if (s.data?.[0]) setServiceId(s.data[0].id);
       if (p.data?.[0]) setProfId(p.data[0].id);
     })();
@@ -238,7 +261,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
         .eq("barbershop_id", barbershop.id)
         .eq("date", fmtDate(date))
         .eq("professional_id", profId)
-        .in("status", ["pending", "confirmed"]);
+        .neq("status", "cancelled");
       setBusy(data ?? []);
     })();
   }, [barbershop, profId, date]);
@@ -248,7 +271,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     const svc = services.find((s) => s.id === serviceId);
     if (!barbershop || !svc) return [] as string[];
     const dow = date.getDay();
-    const h = hours.find((x) => x.day_of_week === dow);
+    const h = professionalHours.find((x) => x.professional_id === profId && x.day_of_week === dow) ?? hours.find((x) => x.day_of_week === dow);
     if (!h || h.is_closed) return [];
     const interval = barbershop.booking_interval_minutes ?? 30;
     const [oh, om] = h.open_time.split(":").map(Number);
@@ -272,7 +295,11 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       }
     }
     return out;
-  }, [barbershop, services, serviceId, hours, busy, date]);
+  }, [barbershop, services, serviceId, hours, professionalHours, profId, busy, date]);
+
+  const availableProfs = serviceId
+    ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
+    : profs;
 
   const submit = async () => {
     if (!barbershop || !serviceId || !profId || !name.trim() || onlyDigits(phone).length < 10 || !time) {
@@ -289,10 +316,10 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       .eq("professional_id", profId)
       .eq("date", fmtDate(date))
       .eq("time", time)
-      .in("status", ["pending", "confirmed"]);
+      .neq("status", "cancelled");
     if (clash && clash.length > 0) {
       setSaving(false);
-      return toast.error("Este horário já está ocupado para este profissional");
+      return toast.error("Horário já ocupado, escolha outro");
     }
 
     const phoneDigits = onlyDigits(phone);
@@ -331,6 +358,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     setSaving(false);
     if (error) {
       console.error("[NewAppt] erro agendamento:", error);
+      if (error.code === "23505") return toast.error("Horário já ocupado, escolha outro");
       return toast.error(error.message);
     }
     toast.success("Agendamento criado");
@@ -374,7 +402,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
             <Select value={profId} onValueChange={(v) => { setProfId(v); setTime(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {profs.map((p) => (
+                {availableProfs.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -414,6 +442,127 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: () => void }) {
+  const { barbershop } = useAuth();
+  const [nextDate, setNextDate] = useState(appointment.date ?? fmtDate(new Date()));
+  const [nextTime, setNextTime] = useState(appointment.time?.slice(0, 5) ?? "");
+  const [hours, setHours] = useState<any[]>([]);
+  const [professionalHours, setProfessionalHours] = useState<any[]>([]);
+  const [busy, setBusy] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!barbershop) return;
+    Promise.all([
+      supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+      supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+    ]).then(([h, ph]) => {
+      setHours(h.data ?? []);
+      setProfessionalHours(ph.data ?? []);
+    });
+  }, [barbershop]);
+
+  useEffect(() => {
+    if (!barbershop || !nextDate) return;
+    supabase
+      .from("appointments")
+      .select("id, time, duration_minutes, professional_id")
+      .eq("barbershop_id", barbershop.id)
+      .eq("professional_id", appointment.professional_id)
+      .eq("date", nextDate)
+      .neq("status", "cancelled")
+      .neq("id", appointment.id)
+      .then(({ data }) => setBusy(data ?? []));
+  }, [barbershop, nextDate, appointment.id, appointment.professional_id]);
+
+  const slots = useMemo(() => {
+    if (!barbershop || !nextDate) return [] as string[];
+    const dow = new Date(nextDate + "T00:00:00").getDay();
+    const h = professionalHours.find((x) => x.professional_id === appointment.professional_id && x.day_of_week === dow) ?? hours.find((x) => x.day_of_week === dow);
+    if (!h || h.is_closed) return [];
+    const [oh, om] = h.open_time.split(":").map(Number);
+    const [ch, cm] = h.close_time.split(":").map(Number);
+    const start = oh * 60 + om;
+    const end = ch * 60 + cm;
+    const duration = appointment.duration_minutes ?? appointment.services?.duration_minutes ?? 30;
+    const interval = barbershop.booking_interval_minutes ?? 30;
+    const blocked = new Set<number>();
+    busy.forEach((a) => {
+      const [hh, mm] = a.time.split(":").map(Number);
+      const startMin = hh * 60 + mm;
+      for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
+    });
+    const out: string[] = [];
+    for (let t = start; t + duration <= end; t += interval) {
+      let conflict = false;
+      for (let m = t; m < t + duration; m++) if (blocked.has(m)) { conflict = true; break; }
+      if (!conflict) out.push(`${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`);
+    }
+    return out;
+  }, [barbershop, nextDate, professionalHours, hours, appointment, busy]);
+
+  const save = async () => {
+    if (!barbershop || !nextDate || !nextTime) return toast.error("Escolha data e horário");
+    setSaving(true);
+    const { data: clash } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("barbershop_id", barbershop.id)
+      .eq("professional_id", appointment.professional_id)
+      .eq("date", nextDate)
+      .eq("time", nextTime)
+      .neq("status", "cancelled")
+      .neq("id", appointment.id);
+    if (clash && clash.length > 0) {
+      setSaving(false);
+      return toast.error("Horário já ocupado, escolha outro");
+    }
+    const { error } = await supabase
+      .from("appointments")
+      .update({ date: nextDate, time: nextTime, status: "confirmed" })
+      .eq("id", appointment.id);
+    setSaving(false);
+    if (error) return toast.error(error.code === "23505" ? "Horário já ocupado, escolha outro" : error.message);
+    toast.success("Agendamento reagendado");
+    onDone();
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="font-display text-2xl tracking-wide">Reagendar atendimento</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+          <div className="font-medium">{appointment.clients?.name}</div>
+          <div className="text-xs text-muted-foreground">{appointment.services?.name} • {appointment.professionals?.name}</div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Nova data</Label>
+          <Input type="date" value={nextDate} onChange={(e) => { setNextDate(e.target.value); setNextTime(""); }} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Novo horário</Label>
+          {slots.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">Sem horários disponíveis nesta data.</p>
+          ) : (
+            <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto">
+              {slots.map((s) => (
+                <button key={s} type="button" onClick={() => setNextTime(s)} className={`rounded-md border p-2 font-mono text-sm transition ${nextTime === s ? "border-gold bg-gold/10 text-gold" : "border-border hover:border-gold/40"}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <Button onClick={save} disabled={saving || !nextTime} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar reagendamento"}
         </Button>
       </div>
     </>
