@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabasePublic } from "@/integrations/supabase/public-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,10 @@ export const Route = createFileRoute("/agendar/$slug")({
 
 const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const timeToMinutes = (value: string) => {
+  const [hh, mm] = value.split(":").map(Number);
+  return hh * 60 + mm;
+};
 
 function PublicBooking() {
   const { slug } = useParams({ from: "/agendar/$slug" });
@@ -78,9 +82,12 @@ function PublicBooking() {
 
   const service = services.find((s) => s.id === serviceId);
   const prof = profs.find((p) => p.id === profId);
-  const professionalsForService = serviceId
-    ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
-    : profs;
+  const professionalsForService = useMemo(
+    () => serviceId
+      ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
+      : profs,
+    [profs, professionalServices, serviceId],
+  );
   const getHoursForProfessional = (professionalId: string, dow: number) =>
     professionalHours.find((x) => x.professional_id === professionalId && x.day_of_week === dow) ??
     hours.find((x) => x.day_of_week === dow);
