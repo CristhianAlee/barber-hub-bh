@@ -261,7 +261,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
         .eq("barbershop_id", barbershop.id)
         .eq("date", fmtDate(date))
         .eq("professional_id", profId)
-        .in("status", ["pending", "confirmed"]);
+        .neq("status", "cancelled");
       setBusy(data ?? []);
     })();
   }, [barbershop, profId, date]);
@@ -402,7 +402,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
             <Select value={profId} onValueChange={(v) => { setProfId(v); setTime(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {profs.map((p) => (
+                {availableProfs.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
