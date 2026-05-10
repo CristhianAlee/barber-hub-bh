@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabasePublic } from "@/integrations/supabase/public-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,8 @@ function PublicBooking() {
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
+  const [professionalHours, setProfessionalHours] = useState<any[]>([]);
+  const [professionalServices, setProfessionalServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [step, setStep] = useState(0); // 0 welcome, 1 service, 2 prof, 3 date/time, 4 details, 5 done
@@ -43,7 +45,7 @@ function PublicBooking() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: b, error: bErr } = await supabase
+        const { data: b, error: bErr } = await supabasePublic
           .from("barbershops")
           .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
           .eq("slug", slug)
@@ -51,10 +53,12 @@ function PublicBooking() {
         if (bErr) console.error("[Agendar] erro barbearia:", bErr);
         if (!b) { setLoading(false); return; }
         setBs(b);
-        const [s, p, h] = await Promise.all([
-          supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
-          supabase.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
-          supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+        const [s, p, h, ph, ps] = await Promise.all([
+          supabasePublic.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          supabasePublic.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          supabasePublic.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabasePublic.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabasePublic.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
         ]);
         if (s.error) console.error("[Agendar] erro serviços:", s.error);
         if (p.error) console.error("[Agendar] erro profissionais:", p.error);
@@ -62,6 +66,8 @@ function PublicBooking() {
         setServices(s.data ?? []);
         setProfs(p.data ?? []);
         setHours(h.data ?? []);
+        setProfessionalHours(ph.data ?? []);
+        setProfessionalServices(ps.data ?? []);
       } catch (e) {
         console.error("[Agendar] erro carregar:", e);
       } finally {
