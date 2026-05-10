@@ -447,3 +447,124 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     </>
   );
 }
+
+function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: () => void }) {
+  const { barbershop } = useAuth();
+  const [nextDate, setNextDate] = useState(appointment.date ?? fmtDate(new Date()));
+  const [nextTime, setNextTime] = useState(appointment.time?.slice(0, 5) ?? "");
+  const [hours, setHours] = useState<any[]>([]);
+  const [professionalHours, setProfessionalHours] = useState<any[]>([]);
+  const [busy, setBusy] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!barbershop) return;
+    Promise.all([
+      supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+      supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+    ]).then(([h, ph]) => {
+      setHours(h.data ?? []);
+      setProfessionalHours(ph.data ?? []);
+    });
+  }, [barbershop]);
+
+  useEffect(() => {
+    if (!barbershop || !nextDate) return;
+    supabase
+      .from("appointments")
+      .select("id, time, duration_minutes, professional_id")
+      .eq("barbershop_id", barbershop.id)
+      .eq("professional_id", appointment.professional_id)
+      .eq("date", nextDate)
+      .neq("status", "cancelled")
+      .neq("id", appointment.id)
+      .then(({ data }) => setBusy(data ?? []));
+  }, [barbershop, nextDate, appointment.id, appointment.professional_id]);
+
+  const slots = useMemo(() => {
+    if (!barbershop || !nextDate) return [] as string[];
+    const dow = new Date(nextDate + "T00:00:00").getDay();
+    const h = professionalHours.find((x) => x.professional_id === appointment.professional_id && x.day_of_week === dow) ?? hours.find((x) => x.day_of_week === dow);
+    if (!h || h.is_closed) return [];
+    const [oh, om] = h.open_time.split(":").map(Number);
+    const [ch, cm] = h.close_time.split(":").map(Number);
+    const start = oh * 60 + om;
+    const end = ch * 60 + cm;
+    const duration = appointment.duration_minutes ?? appointment.services?.duration_minutes ?? 30;
+    const interval = barbershop.booking_interval_minutes ?? 30;
+    const blocked = new Set<number>();
+    busy.forEach((a) => {
+      const [hh, mm] = a.time.split(":").map(Number);
+      const startMin = hh * 60 + mm;
+      for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
+    });
+    const out: string[] = [];
+    for (let t = start; t + duration <= end; t += interval) {
+      let conflict = false;
+      for (let m = t; m < t + duration; m++) if (blocked.has(m)) { conflict = true; break; }
+      if (!conflict) out.push(`${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`);
+    }
+    return out;
+  }, [barbershop, nextDate, professionalHours, hours, appointment, busy]);
+
+  const save = async () => {
+    if (!barbershop || !nextDate || !nextTime) return toast.error("Escolha data e horário");
+    setSaving(true);
+    const { data: clash } = await supabase
+      .from("appointments")
+      .select("id")
+      .eq("barbershop_id", barbershop.id)
+      .eq("professional_id", appointment.professional_id)
+      .eq("date", nextDate)
+      .eq("time", nextTime)
+      .neq("status", "cancelled")
+      .neq("id", appointment.id);
+    if (clash && clash.length > 0) {
+      setSaving(false);
+      return toast.error("Horário já ocupado, escolha outro");
+    }
+    const { error } = await supabase
+      .from("appointments")
+      .update({ date: nextDate, time: nextTime, status: "confirmed" })
+      .eq("id", appointment.id);
+    setSaving(false);
+    if (error) return toast.error(error.code === "23505" ? "Horário já ocupado, escolha outro" : error.message);
+    toast.success("Agendamento reagendado");
+    onDone();
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="font-display text-2xl tracking-wide">Reagendar atendimento</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
+          <div className="font-medium">{appointment.clients?.name}</div>
+          <div className="text-xs text-muted-foreground">{appointment.services?.name} • {appointment.professionals?.name}</div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Nova data</Label>
+          <Input type="date" value={nextDate} onChange={(e) => { setNextDate(e.target.value); setNextTime(""); }} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Novo horário</Label>
+          {slots.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">Sem horários disponíveis nesta data.</p>
+          ) : (
+            <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto">
+              {slots.map((s) => (
+                <button key={s} type="button" onClick={() => setNextTime(s)} className={`rounded-md border p-2 font-mono text-sm transition ${nextTime === s ? "border-gold bg-gold/10 text-gold" : "border-border hover:border-gold/40"}`}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <Button onClick={save} disabled={saving || !nextTime} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar reagendamento"}
+        </Button>
+      </div>
+    </>
+  );
+}
