@@ -110,7 +110,7 @@ function PublicBooking() {
       const end = ch * 60 + cm;
 
       // Get existing appointments for this date
-      let q = supabase
+      let q = supabasePublic
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
@@ -156,7 +156,7 @@ function PublicBooking() {
     setSubmitting(true);
 
     // Double-booking guard
-    const { data: clash } = await supabase
+    const { data: clash } = await supabasePublic
       .from("appointments")
       .select("id")
       .eq("barbershop_id", bs.id)
@@ -172,11 +172,11 @@ function PublicBooking() {
 
     const phoneDigits = onlyDigits(phone);
 
-    const { data: existing } = await supabase
+    const { data: existing } = await supabasePublic
       .from("clients").select("id").eq("barbershop_id", bs.id).eq("phone", phoneDigits).maybeSingle();
     let clientId = existing?.id;
     if (!clientId) {
-      const { data: nc, error } = await supabase
+      const { data: nc, error } = await supabasePublic
         .from("clients")
         .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
         .select("id").single();
@@ -188,7 +188,7 @@ function PublicBooking() {
       clientId = nc.id;
     }
 
-    const { error } = await supabase.from("appointments").insert({
+    const { error } = await supabasePublic.from("appointments").insert({
       barbershop_id: bs.id,
       professional_id: finalProfId,
       client_id: clientId,
