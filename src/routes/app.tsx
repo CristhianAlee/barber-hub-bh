@@ -10,8 +10,8 @@ import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ location }) => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
+    const { data, error } = await supabase.auth.getSession();
+    if (error || data.session === null) {
       throw redirect({ to: "/auth/login", search: { redirect: location.href } as any });
     }
   },
