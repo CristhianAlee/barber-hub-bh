@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadBarbershop = async (uid: string) => {
     const { data } = await supabase
       .from("barbershops")
-      .select("*")
+      .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days, onboarded")
       .eq("owner_id", uid)
       .maybeSingle();
     setBarbershop((data as Barbershop) ?? null);
@@ -72,19 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut: async () => {
           try {
             await supabase.auth.signOut();
-          } catch (e) {
-            console.error("[Auth] signOut error:", e);
-          }
-          setUser(null);
-          setSession(null);
-          setBarbershop(null);
-          if (typeof window !== "undefined") {
-            try {
-              Object.keys(localStorage)
-                .filter((k) => k.startsWith("sb-"))
-                .forEach((k) => localStorage.removeItem(k));
-            } catch {}
-            window.location.href = "/auth/login";
+          } catch (error) {
+            console.error("Logout error:", error);
+          } finally {
+            setUser(null);
+            setSession(null);
+            setBarbershop(null);
+            if (typeof window !== "undefined") {
+              localStorage.clear();
+              sessionStorage.clear();
+              window.location.href = "/auth/login";
+            }
           }
         },
       }}
