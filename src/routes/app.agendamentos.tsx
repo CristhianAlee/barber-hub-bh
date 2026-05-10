@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { toast } from "sonner";
 import { Checkout } from "@/components/Checkout";
@@ -47,6 +47,7 @@ function AgendamentosPage() {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [checkout, setCheckout] = useState<any>(null);
+  const [reschedule, setReschedule] = useState<any>(null);
 
   const load = async () => {
     if (!barbershop) return;
@@ -125,7 +126,7 @@ function AgendamentosPage() {
         ) : (
           <div className="space-y-2">
             {appts.map((a) => (
-              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} />
+              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} onReschedule={() => setReschedule(a)} />
             ))}
           </div>
         )}
@@ -141,11 +142,22 @@ function AgendamentosPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!reschedule} onOpenChange={(o) => !o && setReschedule(null)}>
+        <DialogContent className="bg-card">
+          {reschedule && (
+            <RescheduleDialog
+              appointment={reschedule}
+              onDone={() => { setReschedule(null); load(); }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function ApptRow({ a, onAction, onCheckout }: any) {
+function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
   const statusMap: Record<string, { label: string; cls: string }> = {
     pending: { label: "Pendente", cls: "bg-muted text-muted-foreground border-border" },
     confirmed: { label: "Confirmado", cls: "bg-gold/15 text-gold border-gold/30" },
@@ -181,6 +193,11 @@ function ApptRow({ a, onAction, onCheckout }: any) {
             onClick={onCheckout}
           >
             <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
+          </Button>
+        )}
+        {a.status !== "cancelled" && a.status !== "completed" && (
+          <Button size="sm" variant="outline" onClick={onReschedule}>
+            <CalendarClock className="mr-1 h-3 w-3" /> Reagendar
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && (
