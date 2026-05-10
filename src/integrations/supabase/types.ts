@@ -322,6 +322,60 @@ export type Database = {
           },
         ]
       }
+      professional_business_hours: {
+        Row: {
+          barbershop_id: string
+          close_time: string
+          day_of_week: number
+          id: string
+          is_closed: boolean
+          open_time: string
+          professional_id: string
+        }
+        Insert: {
+          barbershop_id: string
+          close_time?: string
+          day_of_week: number
+          id?: string
+          is_closed?: boolean
+          open_time?: string
+          professional_id: string
+        }
+        Update: {
+          barbershop_id?: string
+          close_time?: string
+          day_of_week?: number
+          id?: string
+          is_closed?: boolean
+          open_time?: string
+          professional_id?: string
+        }
+        Relationships: []
+      }
+      professional_services: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          id: string
+          professional_id: string
+          service_id: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          id?: string
+          professional_id: string
+          service_id: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          id?: string
+          professional_id?: string
+          service_id?: string
+        }
+        Relationships: []
+      }
       professionals: {
         Row: {
           active: boolean
