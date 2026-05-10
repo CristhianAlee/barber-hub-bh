@@ -78,6 +78,12 @@ function PublicBooking() {
 
   const service = services.find((s) => s.id === serviceId);
   const prof = profs.find((p) => p.id === profId);
+  const professionalsForService = serviceId
+    ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
+    : profs;
+  const getHoursForProfessional = (professionalId: string, dow: number) =>
+    professionalHours.find((x) => x.professional_id === professionalId && x.day_of_week === dow) ??
+    hours.find((x) => x.day_of_week === dow);
 
   // Generate available dates (next N days)
   const availableDates: { date: string; label: string; closed: boolean }[] = [];
@@ -100,52 +106,55 @@ function PublicBooking() {
     if (!bs || !date || !service) { setSlots([]); return; }
     (async () => {
       const dow = new Date(date + "T00:00:00").getDay();
-      const h = hours.find((x) => x.day_of_week === dow);
-      if (!h || h.is_closed) { setSlots([]); return; }
+      const candidateProfs = profId
+        ? professionalsForService.filter((p) => p.id === profId)
+        : professionalsForService;
+      if (candidateProfs.length === 0) { setSlots([]); return; }
 
       const interval = bs.booking_interval_minutes ?? 30;
-      const [oh, om] = h.open_time.split(":").map(Number);
-      const [ch, cm] = h.close_time.split(":").map(Number);
-      const start = oh * 60 + om;
-      const end = ch * 60 + cm;
 
       // Get existing appointments for this date
-      let q = supabasePublic
+      const { data: existing } = await supabasePublic
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
         .eq("date", date)
-        .in("status", ["pending", "confirmed"]);
-      if (profId) q = q.eq("professional_id", profId);
-      const { data: existing } = await q;
+        .neq("status", "cancelled");
 
-      const blocked = new Set<number>();
-      (existing ?? []).forEach((a: any) => {
-        const [hh, mm] = a.time.split(":").map(Number);
-        const startMin = hh * 60 + mm;
-        for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
-      });
-
-      const out: string[] = [];
+      const out = new Set<string>();
       const now = new Date();
       const isToday = date === fmtDate(now);
       const nowMin = now.getHours() * 60 + now.getMinutes();
 
-      for (let t = start; t + service.duration_minutes <= end; t += interval) {
-        if (isToday && t <= nowMin) continue;
-        let conflict = false;
-        for (let m = t; m < t + service.duration_minutes; m++) {
-          if (blocked.has(m)) { conflict = true; break; }
+      candidateProfs.forEach((candidate) => {
+        const h = getHoursForProfessional(candidate.id, dow);
+        if (!h || h.is_closed) return;
+        const [oh, om] = h.open_time.split(":").map(Number);
+        const [ch, cm] = h.close_time.split(":").map(Number);
+        const start = oh * 60 + om;
+        const end = ch * 60 + cm;
+        const blocked = new Set<number>();
+        (existing ?? []).filter((a: any) => a.professional_id === candidate.id).forEach((a: any) => {
+          const [hh, mm] = a.time.split(":").map(Number);
+          const startMin = hh * 60 + mm;
+          for (let m = startMin; m < startMin + (a.duration_minutes ?? 30); m++) blocked.add(m);
+        });
+        for (let t = start; t + service.duration_minutes <= end; t += interval) {
+          if (isToday && t <= nowMin) continue;
+          let conflict = false;
+          for (let m = t; m < t + service.duration_minutes; m++) {
+            if (blocked.has(m)) { conflict = true; break; }
+          }
+          if (!conflict) {
+            const hh = String(Math.floor(t / 60)).padStart(2, "0");
+            const mm = String(t % 60).padStart(2, "0");
+            out.add(`${hh}:${mm}`);
+          }
         }
-        if (!conflict) {
-          const hh = String(Math.floor(t / 60)).padStart(2, "0");
-          const mm = String(t % 60).padStart(2, "0");
-          out.push(`${hh}:${mm}`);
-        }
-      }
-      setSlots(out);
+      });
+      setSlots(Array.from(out).sort());
     })();
-  }, [bs, date, service, profId, hours]);
+  }, [bs, date, service, profId, hours, professionalHours, professionalsForService]);
 
   const submit = async () => {
     if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10) return;
