@@ -220,6 +220,8 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
+  const [professionalHours, setProfessionalHours] = useState<any[]>([]);
+  const [professionalServices, setProfessionalServices] = useState<any[]>([]);
   const [busy, setBusy] = useState<{ time: string; duration_minutes: number; professional_id: string }[]>([]);
   const [serviceId, setServiceId] = useState("");
   const [profId, setProfId] = useState("");
@@ -232,14 +234,18 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const [s, p, h] = await Promise.all([
+      const [s, p, h, ph, ps] = await Promise.all([
         supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", barbershop.id).eq("active", true),
         supabase.from("professionals").select("id, name").eq("barbershop_id", barbershop.id).eq("active", true),
         supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+        supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+        supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", barbershop.id),
       ]);
       setServices(s.data ?? []);
       setProfs(p.data ?? []);
       setHours(h.data ?? []);
+      setProfessionalHours(ph.data ?? []);
+      setProfessionalServices(ps.data ?? []);
       if (s.data?.[0]) setServiceId(s.data[0].id);
       if (p.data?.[0]) setProfId(p.data[0].id);
     })();
@@ -265,7 +271,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     const svc = services.find((s) => s.id === serviceId);
     if (!barbershop || !svc) return [] as string[];
     const dow = date.getDay();
-    const h = hours.find((x) => x.day_of_week === dow);
+    const h = professionalHours.find((x) => x.professional_id === profId && x.day_of_week === dow) ?? hours.find((x) => x.day_of_week === dow);
     if (!h || h.is_closed) return [];
     const interval = barbershop.booking_interval_minutes ?? 30;
     const [oh, om] = h.open_time.split(":").map(Number);
@@ -289,7 +295,11 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       }
     }
     return out;
-  }, [barbershop, services, serviceId, hours, busy, date]);
+  }, [barbershop, services, serviceId, hours, professionalHours, profId, busy, date]);
+
+  const availableProfs = serviceId
+    ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
+    : profs;
 
   const submit = async () => {
     if (!barbershop || !serviceId || !profId || !name.trim() || onlyDigits(phone).length < 10 || !time) {
@@ -306,10 +316,10 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       .eq("professional_id", profId)
       .eq("date", fmtDate(date))
       .eq("time", time)
-      .in("status", ["pending", "confirmed"]);
+      .neq("status", "cancelled");
     if (clash && clash.length > 0) {
       setSaving(false);
-      return toast.error("Este horário já está ocupado para este profissional");
+      return toast.error("Horário já ocupado, escolha outro");
     }
 
     const phoneDigits = onlyDigits(phone);
@@ -348,6 +358,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     setSaving(false);
     if (error) {
       console.error("[NewAppt] erro agendamento:", error);
+      if (error.code === "23505") return toast.error("Horário já ocupado, escolha outro");
       return toast.error(error.message);
     }
     toast.success("Agendamento criado");
