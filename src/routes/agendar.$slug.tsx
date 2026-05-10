@@ -166,7 +166,29 @@ function PublicBooking() {
   const submit = async () => {
     if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10) return;
 
-    const finalProfId = profId || profs[0]?.id;
+    let finalProfId = profId;
+    if (!finalProfId) {
+      const dow = new Date(date + "T00:00:00").getDay();
+      const { data: existing } = await supabasePublic
+        .from("appointments")
+        .select("time, duration_minutes, professional_id")
+        .eq("barbershop_id", bs.id)
+        .eq("date", date)
+        .neq("status", "cancelled");
+      finalProfId = professionalsForService.find((candidate) => {
+        const h = getHoursForProfessional(candidate.id, dow);
+        if (!h || h.is_closed) return false;
+        const start = timeToMinutes(time);
+        const open = timeToMinutes(h.open_time);
+        const close = timeToMinutes(h.close_time);
+        if (start < open || start + service.duration_minutes > close) return false;
+        return !(existing ?? []).filter((a: any) => a.professional_id === candidate.id).some((a: any) => {
+          const apptStart = timeToMinutes(a.time);
+          const apptEnd = apptStart + (a.duration_minutes ?? 30);
+          return start < apptEnd && start + service.duration_minutes > apptStart;
+        });
+      })?.id ?? "";
+    }
     if (!finalProfId) return toast.error("Nenhum profissional disponível");
 
     setSubmitting(true);
@@ -179,11 +201,11 @@ function PublicBooking() {
       .eq("professional_id", finalProfId)
       .eq("date", date)
       .eq("time", time)
-      .in("status", ["pending", "confirmed"]);
+      .neq("status", "cancelled");
     if (clash && clash.length > 0) {
       setSubmitting(false);
       setTime("");
-      return toast.error("Este horário acabou de ser preenchido. Escolha outro.");
+      return toast.error("Horário já ocupado, escolha outro");
     }
 
     const phoneDigits = onlyDigits(phone);
@@ -217,6 +239,10 @@ function PublicBooking() {
     if (error) {
       console.error("[Agendar] erro agendamento:", error);
       setSubmitting(false);
+      if (error.code === "23505") {
+        setTime("");
+        return toast.error("Horário já ocupado, escolha outro");
+      }
       return toast.error(error.message);
     }
 
