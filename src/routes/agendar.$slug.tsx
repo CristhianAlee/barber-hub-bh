@@ -210,21 +210,17 @@ function PublicBooking() {
 
     const phoneDigits = onlyDigits(phone);
 
-    const { data: existing } = await supabasePublic
-      .from("clients").select("id").eq("barbershop_id", bs.id).eq("phone", phoneDigits).maybeSingle();
-    let clientId = existing?.id;
-    if (!clientId) {
-      const { data: nc, error } = await supabasePublic
-        .from("clients")
-        .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
-        .select("id").single();
-      if (error) {
-        console.error("[Agendar] erro cliente:", error);
-        setSubmitting(false);
-        return toast.error("Erro ao salvar cliente");
-      }
-      clientId = nc.id;
+    const { data: nc, error: clientError } = await supabasePublic
+      .from("clients")
+      .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
+      .select("id")
+      .single();
+    if (clientError || !nc) {
+      console.error("[Agendar] erro cliente:", clientError);
+      setSubmitting(false);
+      return toast.error("Erro ao salvar cliente");
     }
+    const clientId = nc.id;
 
     const { error } = await supabasePublic.from("appointments").insert({
       barbershop_id: bs.id,
