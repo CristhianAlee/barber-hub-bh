@@ -227,6 +227,7 @@ function ProfessionalsTab() {
   const [list, setList] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [editing, setEditing] = useState<any>(null);
 
   const load = async () => {
     if (!barbershop) return;
@@ -271,14 +272,16 @@ function ProfessionalsTab() {
       <div className="mt-4 space-y-2">
         {list.map((p) => (
           <div key={p.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-            <div>
+            <div className="min-w-0">
               <div className="font-medium">{p.name}</div>
               {p.phone && <div className="text-xs text-muted-foreground">{formatPhone(p.phone)}</div>}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" onClick={() => setEditing(p)} title="Configurar horários e serviços">
+                <Settings className="h-4 w-4 text-gold" />
+              </Button>
               <div className="flex items-center gap-2">
                 <Switch checked={p.active} onCheckedChange={(v) => toggle(p.id, v)} />
-                <span className="text-xs text-muted-foreground">{p.active ? "Ativo" : "Inativo"}</span>
               </div>
               <Button variant="ghost" size="icon" onClick={() => remove(p.id)}>
                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -288,7 +291,203 @@ function ProfessionalsTab() {
         ))}
         {list.length === 0 && <div className="text-sm text-muted-foreground">Nenhum profissional cadastrado.</div>}
       </div>
+      {editing && (
+        <ProfessionalConfigDialog
+          professional={editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+function ProfessionalConfigDialog({ professional, onClose }: { professional: any; onClose: () => void }) {
+  const { barbershop } = useAuth();
+  const [tab, setTab] = useState<"horarios" | "servicos">("horarios");
+  const [hours, setHours] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [linkedServiceIds, setLinkedServiceIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!barbershop) return;
+    (async () => {
+      setLoading(true);
+      const [pHoursRes, bHoursRes, servicesRes, linksRes] = await Promise.all([
+        supabase.from("professional_business_hours").select("*").eq("professional_id", professional.id),
+        supabase.from("business_hours").select("*").eq("barbershop_id", barbershop.id).order("day_of_week"),
+        supabase.from("services").select("id, name, price, active").eq("barbershop_id", barbershop.id).eq("active", true).order("name"),
+        supabase.from("professional_services").select("service_id").eq("professional_id", professional.id),
+      ]);
+      const pHours = pHoursRes.data ?? [];
+      const bHours = bHoursRes.data ?? [];
+      // Build hours per day, falling back to barbershop hours
+      const merged = Array.from({ length: 7 }, (_, dow) => {
+        const ph = pHours.find((h: any) => h.day_of_week === dow);
+        const bh = bHours.find((h: any) => h.day_of_week === dow);
+        return {
+          day_of_week: dow,
+          open_time: (ph?.open_time ?? bh?.open_time ?? "09:00:00").slice(0, 5),
+          close_time: (ph?.close_time ?? bh?.close_time ?? "19:00:00").slice(0, 5),
+          is_closed: ph?.is_closed ?? bh?.is_closed ?? false,
+          custom: !!ph,
+        };
+      });
+      setHours(merged);
+      setServices(servicesRes.data ?? []);
+      setLinkedServiceIds(new Set((linksRes.data ?? []).map((l: any) => l.service_id)));
+      setLoading(false);
+    })();
+  }, [barbershop, professional.id]);
+
+  const updateHour = (idx: number, patch: any) => {
+    const c = [...hours];
+    c[idx] = { ...c[idx], ...patch, custom: true };
+    setHours(c);
+  };
+  const resetDay = async (dow: number) => {
+    if (!barbershop) return;
+    await supabase
+      .from("professional_business_hours")
+      .delete()
+      .eq("professional_id", professional.id)
+      .eq("day_of_week", dow);
+    const { data: bh } = await supabase.from("business_hours").select("*").eq("barbershop_id", barbershop.id).eq("day_of_week", dow).maybeSingle();
+    const c = [...hours];
+    c[dow] = {
+      day_of_week: dow,
+      open_time: (bh?.open_time ?? "09:00:00").slice(0, 5),
+      close_time: (bh?.close_time ?? "19:00:00").slice(0, 5),
+      is_closed: bh?.is_closed ?? false,
+      custom: false,
+    };
+    setHours(c);
+    toast.success("Dia restaurado para horário da barbearia");
+  };
+
+  const toggleService = (id: string) => {
+    const c = new Set(linkedServiceIds);
+    if (c.has(id)) c.delete(id); else c.add(id);
+    setLinkedServiceIds(c);
+  };
+
+  const save = async () => {
+    if (!barbershop) return;
+    setSaving(true);
+    try {
+      // Save custom hours (only those marked custom)
+      const customRows = hours.filter((h) => h.custom).map((h) => ({
+        barbershop_id: barbershop.id,
+        professional_id: professional.id,
+        day_of_week: h.day_of_week,
+        open_time: h.open_time,
+        close_time: h.close_time,
+        is_closed: h.is_closed,
+      }));
+      if (customRows.length > 0) {
+        // Delete existing then insert (avoids missing unique constraint issues)
+        await supabase.from("professional_business_hours").delete().eq("professional_id", professional.id);
+        const { error: hErr } = await supabase.from("professional_business_hours").insert(customRows);
+        if (hErr) throw hErr;
+      }
+
+      // Save service links
+      await supabase.from("professional_services").delete().eq("professional_id", professional.id);
+      const links = Array.from(linkedServiceIds).map((sid) => ({
+        barbershop_id: barbershop.id,
+        professional_id: professional.id,
+        service_id: sid,
+      }));
+      if (links.length > 0) {
+        const { error: sErr } = await supabase.from("professional_services").insert(links);
+        if (sErr) throw sErr;
+      }
+      toast.success("Configurações salvas");
+      onClose();
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message ?? "Erro ao salvar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="font-display tracking-wide">Configurar {professional.name}</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-2 border-b border-border">
+          {(["horarios", "servicos"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm transition ${tab === t ? "border-b-2 border-gold text-gold" : "text-muted-foreground"}`}
+            >
+              {t === "horarios" ? "Horários" : "Serviços"}
+            </button>
+          ))}
+        </div>
+        {loading ? (
+          <div className="space-y-2 py-4">
+            {[0,1,2,3].map((i) => <div key={i} className="h-12 animate-pulse rounded-md bg-muted/30" />)}
+          </div>
+        ) : tab === "horarios" ? (
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Defina horários específicos deste profissional. Dias sem personalização usam o horário da barbearia.
+            </p>
+            {hours.map((h, i) => (
+              <div key={h.day_of_week} className="flex flex-wrap items-center gap-2 border-b border-border pb-2 last:border-0">
+                <div className="w-20 text-sm font-medium">{DAYS[h.day_of_week]}</div>
+                <div className="flex items-center gap-1.5">
+                  <Switch checked={!h.is_closed} onCheckedChange={(v) => updateHour(i, { is_closed: !v })} />
+                  <span className="text-xs text-muted-foreground">{h.is_closed ? "Folga" : "Trabalha"}</span>
+                </div>
+                {!h.is_closed && (
+                  <>
+                    <Input type="time" value={h.open_time} onChange={(e) => updateHour(i, { open_time: e.target.value })} className="w-24" />
+                    <span className="text-xs text-muted-foreground">às</span>
+                    <Input type="time" value={h.close_time} onChange={(e) => updateHour(i, { close_time: e.target.value })} className="w-24" />
+                  </>
+                )}
+                {h.custom && (
+                  <Button variant="ghost" size="sm" onClick={() => resetDay(h.day_of_week)} className="ml-auto text-xs">
+                    Usar padrão
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2 py-2">
+            <p className="text-xs text-muted-foreground">
+              Marque os serviços que este profissional realiza. Se nenhum for marcado, ele realiza todos.
+            </p>
+            {services.map((s) => (
+              <label key={s.id} className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 hover:border-gold/40">
+                <div className="flex items-center gap-3">
+                  <Checkbox checked={linkedServiceIds.has(s.id)} onCheckedChange={() => toggleService(s.id)} />
+                  <div>
+                    <div className="text-sm font-medium">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">{brl(Number(s.price))}</div>
+                  </div>
+                </div>
+              </label>
+            ))}
+            {services.length === 0 && <div className="text-sm text-muted-foreground">Nenhum serviço cadastrado.</div>}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button onClick={save} disabled={saving} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
