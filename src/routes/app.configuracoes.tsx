@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -15,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
+import { Copy, Loader2, Plus, Settings, Trash2 } from "lucide-react";
 import { brl, formatPhone } from "@/lib/format";
 
 export const Route = createFileRoute("/app/configuracoes")({
