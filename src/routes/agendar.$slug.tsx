@@ -288,14 +288,38 @@ function PublicBooking() {
         {/* Step 0 — welcome */}
         {step === 0 && (
           <Card className="border-border bg-card p-6 text-center md:p-8">
-            <div className="mx-auto mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gold/10">
-              <Scissors className="h-10 w-10 text-gold" />
-            </div>
+            {bs.logo_url ? (
+              <img src={bs.logo_url} alt={bs.name} className="mx-auto mb-4 h-20 w-20 rounded-2xl object-cover" />
+            ) : (
+              <div className="mx-auto mb-4 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-gold/10">
+                <Scissors className="h-10 w-10 text-gold" />
+              </div>
+            )}
             <h1 className="font-display text-3xl tracking-wide md:text-4xl">{bs.name}</h1>
             {bs.address && (
               <p className="mt-2 flex items-center justify-center gap-1 text-sm text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" /> {bs.address}
               </p>
+            )}
+            {hours.length > 0 && (
+              <div className="mt-4 rounded-lg border border-border bg-background/40 p-3 text-left text-xs">
+                <div className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
+                  <Clock className="h-3.5 w-3.5" /> Horário de funcionamento
+                </div>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map((label, i) => {
+                    const h = hours.find((x) => x.day_of_week === i);
+                    return (
+                      <div key={i} className="flex justify-between">
+                        <span className="text-muted-foreground">{label}</span>
+                        <span className="font-mono">
+                          {!h || h.is_closed ? "Fechado" : `${h.open_time.slice(0,5)} – ${h.close_time.slice(0,5)}`}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             )}
             <Button onClick={() => setStep(1)} className="mt-6 w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold" size="lg">
               Agendar agora
