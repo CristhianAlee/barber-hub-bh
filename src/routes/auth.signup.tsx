@@ -58,8 +58,8 @@ function Signup() {
       toast.error(error.message.includes("already") ? "Este e-mail já está cadastrado" : "Erro ao criar conta");
       return;
     }
-    toast.success("Conta criada! Bem-vindo ao BarberHub");
-    navigate({ to: "/app/onboarding" });
+    toast.success("Conta criada! Verifique seu e-mail");
+    navigate({ to: "/auth/verify", search: { email: form.email } });
   };
 
   return (
