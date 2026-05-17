@@ -82,12 +82,15 @@ function PublicBooking() {
 
   const service = services.find((s) => s.id === serviceId);
   const prof = profs.find((p) => p.id === profId);
-  const professionalsForService = useMemo(
-    () => serviceId
-      ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
-      : profs,
-    [profs, professionalServices, serviceId],
-  );
+  // Regra: profissional sem NENHUM link em professional_services realiza TODOS os serviços ativos.
+  const professionalsForService = useMemo(() => {
+    if (!serviceId) return profs;
+    return profs.filter((p) => {
+      const links = professionalServices.filter((ps) => ps.professional_id === p.id);
+      if (links.length === 0) return true; // sem vínculos = faz todos
+      return links.some((ps) => ps.service_id === serviceId);
+    });
+  }, [profs, professionalServices, serviceId]);
   const getHoursForProfessional = (professionalId: string, dow: number) =>
     professionalHours.find((x) => x.professional_id === professionalId && x.day_of_week === dow) ??
     hours.find((x) => x.day_of_week === dow);
