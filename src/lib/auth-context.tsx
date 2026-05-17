@@ -41,7 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let mounted = true;
+    // Fallback: nunca deixar a tela presa em loading mais que 3s (multi-aba pode travar o lock do supabase.auth)
+    const failSafe = setTimeout(() => { if (mounted) setLoading(false); }, 3000);
+
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
+      if (!mounted) return;
       setSession(sess);
       setUser(sess?.user ?? null);
       if (sess?.user) {
@@ -51,12 +56,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
     supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return;
       setSession(s);
       setUser(s?.user ?? null);
-      if (s?.user) loadBarbershop(s.user.id).finally(() => setLoading(false));
+      if (s?.user) loadBarbershop(s.user.id).finally(() => mounted && setLoading(false));
       else setLoading(false);
+    }).catch((e) => {
+      console.error("[Auth] getSession falhou:", e);
+      if (mounted) setLoading(false);
     });
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(failSafe);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return (
