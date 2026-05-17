@@ -213,36 +213,40 @@ function PublicBooking() {
 
     const phoneDigits = onlyDigits(phone);
 
-    const { data: nc, error: clientError } = await supabasePublic
-      .from("clients")
-      .insert({ barbershop_id: bs.id, name, phone: phoneDigits, email: email || null })
-      .select("id")
-      .single();
-    if (clientError || !nc) {
-      console.error("[Agendar] erro cliente:", clientError);
-      setSubmitting(false);
-      return toast.error("Erro ao salvar cliente");
-    }
-    const clientId = nc.id;
+    // Gera UUID do cliente no front para não depender de SELECT pós-insert (RLS não libera leitura pública de clients)
+    const clientId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const { error } = await supabasePublic.from("appointments").insert({
+    const { error: clientError } = await supabasePublic
+      .from("clients")
+      .insert({ id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null });
+    if (clientError) {
+      console.error("[Agendar] erro cliente:", clientError, { barbershop_id: bs.id });
+      setSubmitting(false);
+      return toast.error(`Erro ao salvar cliente: ${clientError.message}`);
+    }
+
+    const apptPayload = {
       barbershop_id: bs.id,
       professional_id: finalProfId,
       client_id: clientId,
       service_id: service.id,
       date, time,
       duration_minutes: service.duration_minutes,
-      status: "pending",
+      status: "pending" as const,
       notes: notes || null,
-    });
+    };
+    const { error } = await supabasePublic.from("appointments").insert(apptPayload);
     if (error) {
-      console.error("[Agendar] erro agendamento:", error);
+      console.error("[Agendar] erro agendamento:", error, apptPayload);
       setSubmitting(false);
       if (error.code === "23505") {
         setTime("");
         return toast.error("Horário já ocupado, escolha outro");
       }
-      return toast.error(error.message);
+      return toast.error(`Erro ao agendar: ${error.message}`);
     }
 
     const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";
