@@ -243,10 +243,25 @@ function ProfessionalsTab() {
   const add = async () => {
     if (!name.trim() || !barbershop) return toast.error("Informe o nome");
     if (phone.replace(/\D/g, "").length < 10) return toast.error("Telefone obrigatório");
-    const { error } = await supabase
+    const { data: created, error } = await supabase
       .from("professionals")
-      .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") });
-    if (error) return toast.error(error.message);
+      .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") })
+      .select("id")
+      .single();
+    if (error || !created) return toast.error(error?.message ?? "Erro ao adicionar");
+    // Auto-vincula todos os serviços ativos ao novo profissional
+    const { data: activeServices } = await supabase
+      .from("services").select("id").eq("barbershop_id", barbershop.id).eq("active", true);
+    if (activeServices && activeServices.length > 0) {
+      await supabase.from("professional_services").insert(
+        activeServices.map((s) => ({
+          barbershop_id: barbershop.id,
+          professional_id: created.id,
+          service_id: s.id,
+        }))
+      );
+    }
+    toast.success("Profissional adicionado");
     setName(""); setPhone("");
     load();
   };
