@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -101,7 +101,7 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
   const save = async () => {
     if (!barbershop) return;
     setSaving(true);
-    const { error } = await supabase
+    const { error } = await localData
       .from("barbershops")
       .update({
         name,
@@ -172,7 +172,7 @@ function BusinessHours() {
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const { data } = await supabase
+      const { data } = await localData
         .from("business_hours")
         .select("*")
         .eq("barbershop_id", barbershop.id)
@@ -189,7 +189,7 @@ function BusinessHours() {
   };
 
   const save = async () => {
-    const { error } = await supabase
+    const { error } = await localData
       .from("business_hours")
       .upsert(hours.map((h) => ({ ...h })), { onConflict: "barbershop_id,day_of_week" });
     if (error) return toast.error("Erro ao salvar");
@@ -231,7 +231,7 @@ function ProfessionalsTab() {
 
   const load = async () => {
     if (!barbershop) return;
-    const { data } = await supabase
+    const { data } = await localData
       .from("professionals")
       .select("*")
       .eq("barbershop_id", barbershop.id)
@@ -243,18 +243,18 @@ function ProfessionalsTab() {
   const add = async () => {
     if (!name.trim() || !barbershop) return toast.error("Informe o nome");
     if (phone.replace(/\D/g, "").length < 10) return toast.error("Telefone obrigatório");
-    const { data: created, error } = await supabase
+    const { data: created, error } = await localData
       .from("professionals")
       .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") })
       .select("id")
       .single();
     if (error || !created) return toast.error(error?.message ?? "Erro ao adicionar");
     // Auto-vincula todos os serviços ativos ao novo profissional
-    const { data: activeServices } = await supabase
+    const { data: activeServices } = await localData
       .from("services").select("id").eq("barbershop_id", barbershop.id).eq("active", true);
     if (activeServices && activeServices.length > 0) {
-      await supabase.from("professional_services").insert(
-        activeServices.map((s) => ({
+      await localData.from("professional_services").insert(
+        activeServices.map((s: any) => ({
           barbershop_id: barbershop.id,
           professional_id: created.id,
           service_id: s.id,
@@ -266,12 +266,12 @@ function ProfessionalsTab() {
     load();
   };
   const toggle = async (id: string, active: boolean) => {
-    await supabase.from("professionals").update({ active }).eq("id", id);
+    await localData.from("professionals").update({ active }).eq("id", id);
     load();
   };
   const remove = async (id: string) => {
     if (!confirm("Remover profissional?")) return;
-    await supabase.from("professionals").delete().eq("id", id);
+    await localData.from("professionals").delete().eq("id", id);
     load();
   };
 
@@ -330,10 +330,10 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
     (async () => {
       setLoading(true);
       const [pHoursRes, bHoursRes, servicesRes, linksRes] = await Promise.all([
-        supabase.from("professional_business_hours").select("*").eq("professional_id", professional.id),
-        supabase.from("business_hours").select("*").eq("barbershop_id", barbershop.id).order("day_of_week"),
-        supabase.from("services").select("id, name, price, active").eq("barbershop_id", barbershop.id).eq("active", true).order("name"),
-        supabase.from("professional_services").select("service_id").eq("professional_id", professional.id),
+        localData.from("professional_business_hours").select("*").eq("professional_id", professional.id),
+        localData.from("business_hours").select("*").eq("barbershop_id", barbershop.id).order("day_of_week"),
+        localData.from("services").select("id, name, price, active").eq("barbershop_id", barbershop.id).eq("active", true).order("name"),
+        localData.from("professional_services").select("service_id").eq("professional_id", professional.id),
       ]);
       const pHours = pHoursRes.data ?? [];
       const bHours = bHoursRes.data ?? [];
@@ -363,12 +363,12 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
   };
   const resetDay = async (dow: number) => {
     if (!barbershop) return;
-    await supabase
+    await localData
       .from("professional_business_hours")
       .delete()
       .eq("professional_id", professional.id)
       .eq("day_of_week", dow);
-    const { data: bh } = await supabase.from("business_hours").select("*").eq("barbershop_id", barbershop.id).eq("day_of_week", dow).maybeSingle();
+    const { data: bh } = await localData.from("business_hours").select("*").eq("barbershop_id", barbershop.id).eq("day_of_week", dow).maybeSingle();
     const c = [...hours];
     c[dow] = {
       day_of_week: dow,
@@ -402,20 +402,20 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
       }));
       if (customRows.length > 0) {
         // Delete existing then insert (avoids missing unique constraint issues)
-        await supabase.from("professional_business_hours").delete().eq("professional_id", professional.id);
-        const { error: hErr } = await supabase.from("professional_business_hours").insert(customRows);
+        await localData.from("professional_business_hours").delete().eq("professional_id", professional.id);
+        const { error: hErr } = await localData.from("professional_business_hours").insert(customRows);
         if (hErr) throw hErr;
       }
 
       // Save service links
-      await supabase.from("professional_services").delete().eq("professional_id", professional.id);
+      await localData.from("professional_services").delete().eq("professional_id", professional.id);
       const links = Array.from(linkedServiceIds).map((sid) => ({
         barbershop_id: barbershop.id,
         professional_id: professional.id,
         service_id: sid,
       }));
       if (links.length > 0) {
-        const { error: sErr } = await supabase.from("professional_services").insert(links);
+        const { error: sErr } = await localData.from("professional_services").insert(links);
         if (sErr) throw sErr;
       }
       toast.success("Configurações salvas");
@@ -513,7 +513,7 @@ function ServicesTab() {
 
   const load = async () => {
     if (!barbershop) return;
-    const { data } = await supabase
+    const { data } = await localData
       .from("services").select("*").eq("barbershop_id", barbershop.id).order("created_at");
     setList(data ?? []);
   };
@@ -521,7 +521,7 @@ function ServicesTab() {
 
   const add = async () => {
     if (!form.name.trim() || !barbershop) return;
-    const { error } = await supabase.from("services").insert({
+    const { error } = await localData.from("services").insert({
       barbershop_id: barbershop.id,
       name: form.name,
       duration_minutes: form.duration,
@@ -533,11 +533,11 @@ function ServicesTab() {
   };
   const remove = async (id: string) => {
     if (!confirm("Remover serviço?")) return;
-    await supabase.from("services").delete().eq("id", id);
+    await localData.from("services").delete().eq("id", id);
     load();
   };
   const toggle = async (id: string, active: boolean) => {
-    await supabase.from("services").update({ active }).eq("id", id);
+    await localData.from("services").update({ active }).eq("id", id);
     load();
   };
 

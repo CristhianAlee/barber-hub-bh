@@ -2,12 +2,11 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Calendar, DollarSign, Package, Users, Scissors, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getLocalAuthEmail } from "@/lib/auth-context";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/app" });
+    if (getLocalAuthEmail()) throw redirect({ to: "/app" });
   },
   component: Landing,
 });

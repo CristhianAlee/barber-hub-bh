@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { passwordStrength } from "@/lib/format";
@@ -23,14 +23,14 @@ function Reset() {
     e.preventDefault();
     if (pw.length < 8 || pw !== confirm) return;
     setLoading(true);
-    const { error } = await supabase.auth.updateUser({ password: pw });
+    const { error } = await localData.auth.updateUser({ password: pw });
     setLoading(false);
     if (error) {
       toast.error("Não foi possível redefinir. Solicite um novo link.");
       return;
     }
     toast.success("Senha redefinida!");
-    await supabase.auth.signOut();
+    await localData.auth.signOut();
     navigate({ to: "/auth/login" });
   };
 

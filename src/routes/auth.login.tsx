@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { signInLocal } from "@/lib/auth-context";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock } from "lucide-react";
 
@@ -20,12 +20,8 @@ function Login() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    signInLocal(email);
     setLoading(false);
-    if (error) {
-      toast.error("E-mail ou senha incorretos");
-      return;
-    }
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };

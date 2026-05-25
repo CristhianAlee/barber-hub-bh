@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { brl } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,26 +40,26 @@ function Dashboard() {
       const monthIso = monthStart.toISOString();
 
       const [salesRes, apptsRes, clientsRes, productsRes, upcomingRes] = await Promise.all([
-        supabase
+        localData
           .from("sales")
           .select("total_amount, created_at")
           .eq("barbershop_id", barbershop.id)
           .gte("created_at", `${today}T00:00:00`),
-        supabase
+        localData
           .from("appointments")
           .select("id")
           .eq("barbershop_id", barbershop.id)
           .eq("date", today),
-        supabase
+        localData
           .from("clients")
           .select("id")
           .eq("barbershop_id", barbershop.id)
           .gte("created_at", monthIso),
-        supabase
+        localData
           .from("products")
           .select("id, stock_quantity, min_stock_alert")
           .eq("barbershop_id", barbershop.id),
-        supabase
+        localData
           .from("appointments")
           .select("id, time, status, notes, clients(name), services(name, price), professionals(name)")
           .eq("barbershop_id", barbershop.id)

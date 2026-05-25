@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,7 +47,7 @@ function FinanceiroPage() {
   const load = async () => {
     if (!barbershop) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data } = await localData
       .from("financial_entries")
       .select("id, date, type, category, description, amount, payment_method")
       .eq("barbershop_id", barbershop.id)
@@ -255,7 +255,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
     const a = Number(amount);
     if (!barbershop || !a || a <= 0) return toast.error("Valor inválido");
     setSaving(true);
-    const { error } = await supabase.from("financial_entries").insert({
+    const { error } = await localData.from("financial_entries").insert({
       barbershop_id: barbershop.id,
       type, category: category || null, description: description || null,
       amount: a, date, payment_method: paymentMethod as any,

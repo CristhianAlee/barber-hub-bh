@@ -1,1 +1,0 @@
-GRANT EXECUTE ON FUNCTION public.user_owns_barbershop(uuid) TO anon, authenticated;
