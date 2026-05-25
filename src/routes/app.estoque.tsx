@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,16 +44,16 @@ function EstoquePage() {
   const load = async () => {
     if (!barbershop) return;
     setLoading(true);
-    const { data: pData } = await supabase
+    const { data: pData } = await localData
       .from("products")
       .select("id, name, category, description, price, cost, stock_quantity, min_stock_alert, active")
       .eq("barbershop_id", barbershop.id)
       .eq("active", true)
       .order("name");
-    const ids = (pData ?? []).map((p) => p.id);
+    const ids = (pData ?? []).map((p: any) => p.id);
     let mData: any[] = [];
     if (ids.length > 0) {
-      const { data } = await supabase
+      const { data } = await localData
         .from("stock_movements")
         .select("id, product_id, type, quantity, reason, created_at, products(name)")
         .in("product_id", ids)
@@ -245,7 +245,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
   const submit = async () => {
     if (!barbershop || !name.trim()) return toast.error("Nome obrigatório");
     setSaving(true);
-    const { error } = await supabase.from("products").insert({
+    const { error } = await localData.from("products").insert({
       barbershop_id: barbershop.id,
       name,
       category: category || null,
@@ -297,11 +297,11 @@ function MovementForm({ product, onDone }: { product: Product; onDone: () => voi
     const newStock =
       type === "in" ? product.stock_quantity + q : product.stock_quantity - q;
     if (newStock < 0) { setSaving(false); return toast.error("Estoque ficaria negativo"); }
-    const { error: e1 } = await supabase
+    const { error: e1 } = await localData
       .from("stock_movements")
       .insert({ product_id: product.id, type, quantity: q, reason: reason || null });
     if (e1) { setSaving(false); return toast.error(e1.message); }
-    const { error: e2 } = await supabase
+    const { error: e2 } = await localData
       .from("products").update({ stock_quantity: newStock }).eq("id", product.id);
     setSaving(false);
     if (e2) return toast.error(e2.message);

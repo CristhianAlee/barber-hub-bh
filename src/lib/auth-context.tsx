@@ -1,6 +1,21 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import type { Session, User } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+
+type User = {
+  id: string;
+  email?: string;
+  app_metadata: Record<string, unknown>;
+  user_metadata: Record<string, unknown>;
+  aud: string;
+  created_at: string;
+};
+
+type Session = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  token_type: string;
+  user: User;
+};
 
 type Barbershop = {
   id: string;
@@ -24,6 +39,67 @@ type AuthCtx = {
 };
 
 const Ctx = createContext<AuthCtx | undefined>(undefined);
+export const LOCAL_AUTH_STORAGE_KEY = "barberhub.localAuth";
+
+function createLocalUser(email: string): User {
+  return {
+    id: "local-dev-user",
+    email,
+    app_metadata: {},
+    user_metadata: { name: "Usuario Local" },
+    aud: "authenticated",
+    created_at: new Date().toISOString(),
+  } as User;
+}
+
+function createLocalSession(user: User): Session {
+  return {
+    access_token: "local-dev-token",
+    refresh_token: "local-dev-refresh-token",
+    expires_in: 60 * 60 * 24 * 365,
+    token_type: "bearer",
+    user,
+  } as Session;
+}
+
+function createLocalBarbershop(): Barbershop {
+  return {
+    id: "local-dev-barbershop",
+    name: "Barbearia Local",
+    slug: "barbearia-local",
+    phone: null,
+    address: null,
+    logo_url: null,
+    booking_interval_minutes: 30,
+    max_advance_days: 30,
+    onboarded: true,
+  };
+}
+
+export function getLocalAuthEmail(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_AUTH_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { email?: unknown };
+    return typeof parsed.email === "string" ? parsed.email : null;
+  } catch {
+    return null;
+  }
+}
+
+export function signInLocal(email: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(
+    LOCAL_AUTH_STORAGE_KEY,
+    JSON.stringify({ email, signedInAt: new Date().toISOString() }),
+  );
+}
+
+export function signOutLocal() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(LOCAL_AUTH_STORAGE_KEY);
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -31,44 +107,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [barbershop, setBarbershop] = useState<Barbershop | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadBarbershop = async (uid: string) => {
-    const { data } = await supabase
-      .from("barbershops")
-      .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days, onboarded")
-      .eq("owner_id", uid)
-      .maybeSingle();
-    setBarbershop((data as Barbershop) ?? null);
+  const loadLocalSession = () => {
+    const email = getLocalAuthEmail();
+    if (!email) {
+      setUser(null);
+      setSession(null);
+      setBarbershop(null);
+      return;
+    }
+
+    const localUser = createLocalUser(email);
+    setUser(localUser);
+    setSession(createLocalSession(localUser));
+    setBarbershop(createLocalBarbershop());
   };
 
   useEffect(() => {
     let mounted = true;
-    // Fallback: nunca deixar a tela presa em loading mais que 3s (multi-aba pode travar o lock do supabase.auth)
-    const failSafe = setTimeout(() => { if (mounted) setLoading(false); }, 3000);
+    loadLocalSession();
+    setLoading(false);
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, sess) => {
-      if (!mounted) return;
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        setTimeout(() => loadBarbershop(sess.user.id), 0);
-      } else {
-        setBarbershop(null);
-      }
-    });
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      if (!mounted) return;
-      setSession(s);
-      setUser(s?.user ?? null);
-      if (s?.user) loadBarbershop(s.user.id).finally(() => mounted && setLoading(false));
-      else setLoading(false);
-    }).catch((e) => {
-      console.error("[Auth] getSession falhou:", e);
-      if (mounted) setLoading(false);
-    });
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== LOCAL_AUTH_STORAGE_KEY || !mounted) return;
+      loadLocalSession();
+    };
+    window.addEventListener("storage", onStorage);
+
     return () => {
       mounted = false;
-      clearTimeout(failSafe);
-      sub.subscription.unsubscribe();
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
@@ -80,22 +147,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         barbershop,
         loading,
         refreshBarbershop: async () => {
-          if (user) await loadBarbershop(user.id);
+          loadLocalSession();
         },
         signOut: async () => {
-          try {
-            await supabase.auth.signOut();
-          } catch (error) {
-            console.error("Logout error:", error);
-          } finally {
-            setUser(null);
-            setSession(null);
-            setBarbershop(null);
-            if (typeof window !== "undefined") {
-              localStorage.clear();
-              sessionStorage.clear();
-              window.location.href = "/auth/login";
-            }
+          signOutLocal();
+          setUser(null);
+          setSession(null);
+          setBarbershop(null);
+          if (typeof window !== "undefined") {
+            window.location.href = "/auth/login";
           }
         },
       }}

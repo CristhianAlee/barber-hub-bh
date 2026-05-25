@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { formatPhone, onlyDigits, passwordStrength } from "@/lib/format";
@@ -41,7 +41,7 @@ function Signup() {
     e.preventDefault();
     if (!valid) return;
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { error } = await localData.auth.signUp({
       email: form.email,
       password: form.password,
       options: {

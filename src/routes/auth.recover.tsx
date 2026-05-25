@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { toast } from "sonner";
 import { Loader2, MailCheck } from "lucide-react";
 
@@ -19,7 +19,7 @@ function Recover() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await localData.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset`,
     });
     setLoading(false);

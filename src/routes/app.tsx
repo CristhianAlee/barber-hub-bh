@@ -1,8 +1,7 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { useAuth } from "@/lib/auth-context";
+import { getLocalAuthEmail, useAuth } from "@/lib/auth-context";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Loader2 } from "lucide-react";
@@ -11,8 +10,7 @@ import { Logo } from "@/components/Logo";
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ location }) => {
     if (typeof window === "undefined") return;
-    const { data, error } = await supabase.auth.getSession();
-    if (error || data.session === null) {
+    if (!getLocalAuthEmail()) {
       throw redirect({ to: "/auth/login", search: { redirect: location.href } as any });
     }
   },

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { localData } from "@/lib/local-data";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,8 +35,8 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
   useEffect(() => {
     (async () => {
       const [s, p] = await Promise.all([
-        supabase.from("services").select("id, name, price").eq("barbershop_id", appointment.barbershop_id).eq("active", true),
-        supabase.from("products").select("id, name, price, stock_quantity").eq("barbershop_id", appointment.barbershop_id).eq("active", true).gt("stock_quantity", 0).limit(3),
+        localData.from("services").select("id, name, price").eq("barbershop_id", appointment.barbershop_id).eq("active", true),
+        localData.from("products").select("id, name, price, stock_quantity").eq("barbershop_id", appointment.barbershop_id).eq("active", true).gt("stock_quantity", 0).limit(3),
       ]);
       setServices((s.data ?? []).filter((x: any) => x.id !== appointment.service_id));
       setProducts((p.data as Product[]) ?? []);
@@ -59,7 +59,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
     setSubmitting(true);
     try {
       // 1. Create sale
-      const { data: sale, error: saleErr } = await supabase
+      const { data: sale, error: saleErr } = await localData
         .from("sales")
         .insert({
           barbershop_id: appointment.barbershop_id,
@@ -93,12 +93,12 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
         if (q > 0) items.push({ sale_id: sale.id, type: "product", item_id: p.id, name: p.name, quantity: q, unit_price: Number(p.price) });
       });
       if (items.length > 0) {
-        const { error: itemsErr } = await supabase.from("sale_items").insert(items);
+        const { error: itemsErr } = await localData.from("sale_items").insert(items);
         if (itemsErr) console.error("[Checkout] Falha ao salvar itens:", itemsErr);
       }
 
       // 3. Financial entry
-      const { error: finErr } = await supabase.from("financial_entries").insert({
+      const { error: finErr } = await localData.from("financial_entries").insert({
         barbershop_id: appointment.barbershop_id,
         type: "income",
         category: "Atendimento",
@@ -115,10 +115,10 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
         products.map(async (p) => {
           const q = orderbumpProducts.get(p.id) ?? 0;
           if (q > 0) {
-            const { error: stockErr } = await supabase.from("products")
+            const { error: stockErr } = await localData.from("products")
               .update({ stock_quantity: p.stock_quantity - q }).eq("id", p.id);
             if (stockErr) console.error("[Checkout] Falha ao baixar estoque:", stockErr);
-            await supabase.from("stock_movements").insert({
+            await localData.from("stock_movements").insert({
               product_id: p.id, type: "out", quantity: q, reason: "Venda no atendimento",
             });
           }
@@ -126,16 +126,16 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       );
 
       // 5. Update appointment
-      const { error: apptErr } = await supabase.from("appointments")
+      const { error: apptErr } = await localData.from("appointments")
         .update({ status: "completed" }).eq("id", appointment.id);
       if (apptErr) console.error("[Checkout] Falha ao concluir agendamento:", apptErr);
 
       // 6. Update client totals
-      const { data: client } = await supabase
+      const { data: client } = await localData
         .from("clients").select("total_visits, total_spent")
         .eq("id", appointment.client_id).maybeSingle();
       if (client) {
-        await supabase.from("clients").update({
+        await localData.from("clients").update({
           total_visits: (client.total_visits ?? 0) + 1,
           total_spent: Number(client.total_spent ?? 0) + total,
           last_visit: new Date().toISOString(),

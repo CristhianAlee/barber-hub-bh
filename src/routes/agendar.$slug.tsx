@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabasePublic } from "@/integrations/supabase/public-client";
+import { localData } from "@/lib/local-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +49,7 @@ function PublicBooking() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: b, error: bErr } = await supabasePublic
+        const { data: b, error: bErr } = await localData
           .from("barbershops")
           .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
           .eq("slug", slug)
@@ -58,11 +58,11 @@ function PublicBooking() {
         if (!b) { setLoading(false); return; }
         setBs(b);
         const [s, p, h, ph, ps] = await Promise.all([
-          supabasePublic.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
-          supabasePublic.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
-          supabasePublic.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
-          supabasePublic.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
-          supabasePublic.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
+          localData.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          localData.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          localData.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          localData.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          localData.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
         ]);
         if (s.error) console.error("[Agendar] erro serviços:", s.error);
         if (p.error) console.error("[Agendar] erro profissionais:", p.error);
@@ -124,7 +124,7 @@ function PublicBooking() {
       const interval = bs.booking_interval_minutes ?? 30;
 
       // Get existing appointments for this date
-      const { data: existing } = await supabasePublic
+      const { data: existing } = await localData
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
@@ -172,7 +172,7 @@ function PublicBooking() {
     let finalProfId = profId;
     if (!finalProfId) {
       const dow = new Date(date + "T00:00:00").getDay();
-      const { data: existing } = await supabasePublic
+      const { data: existing } = await localData
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
@@ -197,7 +197,7 @@ function PublicBooking() {
     setSubmitting(true);
 
     // Double-booking guard
-    const { data: clash } = await supabasePublic
+    const { data: clash } = await localData
       .from("appointments")
       .select("id")
       .eq("barbershop_id", bs.id)
@@ -219,7 +219,7 @@ function PublicBooking() {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const { error: clientError } = await supabasePublic
+    const { error: clientError } = await localData
       .from("clients")
       .insert({ id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null });
     if (clientError) {
@@ -238,7 +238,7 @@ function PublicBooking() {
       status: "pending" as const,
       notes: notes || null,
     };
-    const { error } = await supabasePublic.from("appointments").insert(apptPayload);
+    const { error } = await localData.from("appointments").insert(apptPayload);
     if (error) {
       console.error("[Agendar] erro agendamento:", error, apptPayload);
       setSubmitting(false);
