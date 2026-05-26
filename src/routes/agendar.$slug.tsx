@@ -1,12 +1,12 @@
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { localData } from "@/lib/local-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-
 import { Logo } from "@/components/Logo";
+import { useLanguage } from "@/hooks/useLanguage";
 import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
 import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -22,9 +22,33 @@ const timeToMinutes = (value: string) => {
   return hh * 60 + mm;
 };
 
+function LangToggle() {
+  const { language, setLanguage } = useLanguage();
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5">
+      <button
+        onClick={() => setLanguage("pt")}
+        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+          language === "pt" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        PT
+      </button>
+      <button
+        onClick={() => setLanguage("en")}
+        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+          language === "en" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        EN
+      </button>
+    </div>
+  );
+}
+
 function PublicBooking() {
   const { slug } = useParams({ from: "/agendar/$slug" });
-  const navigate = useNavigate();
+  const { t } = useLanguage();
   const [bs, setBs] = useState<any>(null);
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
@@ -33,7 +57,7 @@ function PublicBooking() {
   const [professionalServices, setProfessionalServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [step, setStep] = useState(0); // 0 welcome, 1 service, 2 prof, 3 date/time, 4 details, 5 done
+  const [step, setStep] = useState(0);
   const [serviceId, setServiceId] = useState("");
   const [profId, setProfId] = useState("");
   const [date, setDate] = useState<string>("");
@@ -42,7 +66,6 @@ function PublicBooking() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
 
@@ -64,9 +87,6 @@ function PublicBooking() {
           localData.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
           localData.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
         ]);
-        if (s.error) console.error("[Agendar] erro serviços:", s.error);
-        if (p.error) console.error("[Agendar] erro profissionais:", p.error);
-        if (h.error) console.error("[Agendar] erro horários:", h.error);
         setServices(s.data ?? []);
         setProfs(p.data ?? []);
         setHours(h.data ?? []);
@@ -82,20 +102,20 @@ function PublicBooking() {
 
   const service = services.find((s) => s.id === serviceId);
   const prof = profs.find((p) => p.id === profId);
-  // Regra: profissional sem NENHUM link em professional_services realiza TODOS os serviços ativos.
+
   const professionalsForService = useMemo(() => {
     if (!serviceId) return profs;
     return profs.filter((p) => {
       const links = professionalServices.filter((ps) => ps.professional_id === p.id);
-      if (links.length === 0) return true; // sem vínculos = faz todos
+      if (links.length === 0) return true;
       return links.some((ps) => ps.service_id === serviceId);
     });
   }, [profs, professionalServices, serviceId]);
+
   const getHoursForProfessional = (professionalId: string, dow: number) =>
     professionalHours.find((x) => x.professional_id === professionalId && x.day_of_week === dow) ??
     hours.find((x) => x.day_of_week === dow);
 
-  // Generate available dates (next N days)
   const availableDates: { date: string; label: string; closed: boolean }[] = [];
   if (bs) {
     for (let i = 0; i < (bs.max_advance_days ?? 30); i++) {
@@ -110,7 +130,6 @@ function PublicBooking() {
     }
   }
 
-  // Generate available time slots
   const [slots, setSlots] = useState<string[]>([]);
   useEffect(() => {
     if (!bs || !date || !service) { setSlots([]); return; }
@@ -122,8 +141,6 @@ function PublicBooking() {
       if (candidateProfs.length === 0) { setSlots([]); return; }
 
       const interval = bs.booking_interval_minutes ?? 30;
-
-      // Get existing appointments for this date
       const { data: existing } = await localData
         .from("appointments")
         .select("time, duration_minutes, professional_id")
@@ -196,7 +213,6 @@ function PublicBooking() {
 
     setSubmitting(true);
 
-    // Double-booking guard
     const { data: clash } = await localData
       .from("appointments")
       .select("id")
@@ -212,8 +228,6 @@ function PublicBooking() {
     }
 
     const phoneDigits = onlyDigits(phone);
-
-    // Gera UUID do cliente no front para não depender de SELECT pós-insert (RLS não libera leitura pública de clients)
     const clientId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
@@ -223,7 +237,6 @@ function PublicBooking() {
       .from("clients")
       .insert({ id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null });
     if (clientError) {
-      console.error("[Agendar] erro cliente:", clientError, { barbershop_id: bs.id });
       setSubmitting(false);
       return toast.error(`Erro ao salvar cliente: ${clientError.message}`);
     }
@@ -240,12 +253,8 @@ function PublicBooking() {
     };
     const { error } = await localData.from("appointments").insert(apptPayload);
     if (error) {
-      console.error("[Agendar] erro agendamento:", error, apptPayload);
       setSubmitting(false);
-      if (error.code === "23505") {
-        setTime("");
-        return toast.error("Horário já ocupado, escolha outro");
-      }
+      if (error.code === "23505") { setTime(""); return toast.error("Horário já ocupado, escolha outro"); }
       return toast.error(`Erro ao agendar: ${error.message}`);
     }
 
@@ -254,23 +263,20 @@ function PublicBooking() {
     const waUrl = `https://wa.me/55${phoneDigits}?text=${encodeURIComponent(msg)}`;
     window.open(waUrl, "_blank");
 
-    setCreated({
-      service: service.name, price: service.price,
-      prof: profName, date, time, name,
-    });
+    setCreated({ service: service.name, price: service.price, prof: profName, date, time, name });
     setSubmitting(false);
     setStep(5);
   };
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-gold" /></div>;
+    return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-6 w-6 animate-spin text-gold" /></div>;
   }
   if (!bs) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4 text-center">
         <div>
-          <h1 className="font-display text-3xl tracking-wide">Barbearia não encontrada</h1>
-          <p className="mt-2 text-sm text-muted-foreground">O link que você acessou está inválido.</p>
+          <h1 className="font-display text-3xl tracking-wide">{t("book_not_found")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("book_not_found_sub")}</p>
         </div>
       </div>
     );
@@ -283,12 +289,15 @@ function PublicBooking() {
         <div className="mb-6 flex items-center justify-between">
           {step > 0 && step < 5 ? (
             <Button variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
-              <ChevronLeft className="mr-1 h-4 w-4" /> Voltar
+              <ChevronLeft className="mr-1 h-4 w-4" /> {t("back")}
             </Button>
           ) : <div />}
-          <div className="flex items-center gap-2">
-            <Logo size={28} />
-            <span className="font-display text-lg tracking-wider">BARBER<span className="text-gold">HUB</span></span>
+          <div className="flex items-center gap-3">
+            <LangToggle />
+            <div className="flex items-center gap-2">
+              <Logo size={28} />
+              <span className="font-display text-lg tracking-wider">BARBER<span className="text-gold">HUB</span></span>
+            </div>
           </div>
         </div>
 
@@ -311,7 +320,7 @@ function PublicBooking() {
             {hours.length > 0 && (
               <div className="mt-4 rounded-lg border border-border bg-background/40 p-3 text-left text-xs">
                 <div className="mb-1.5 flex items-center gap-1 font-medium text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" /> Horário de funcionamento
+                  <Clock className="h-3.5 w-3.5" /> {t("book_hours")}
                 </div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                   {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map((label, i) => {
@@ -320,7 +329,7 @@ function PublicBooking() {
                       <div key={i} className="flex justify-between">
                         <span className="text-muted-foreground">{label}</span>
                         <span className="font-mono">
-                          {!h || h.is_closed ? "Fechado" : `${h.open_time.slice(0,5)} – ${h.close_time.slice(0,5)}`}
+                          {!h || h.is_closed ? t("closed") : `${h.open_time.slice(0,5)} – ${h.close_time.slice(0,5)}`}
                         </span>
                       </div>
                     );
@@ -329,7 +338,7 @@ function PublicBooking() {
               </div>
             )}
             <Button onClick={() => setStep(1)} className="mt-6 w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold" size="lg">
-              Agendar agora
+              {t("book_book_now")}
             </Button>
           </Card>
         )}
@@ -337,7 +346,7 @@ function PublicBooking() {
         {/* Step 1 — service */}
         {step === 1 && (
           <Card className="border-border bg-card p-5">
-            <h2 className="mb-4 font-display text-2xl tracking-wide">Escolha o serviço</h2>
+            <h2 className="mb-4 font-display text-2xl tracking-wide">{t("book_choose_service")}</h2>
             <div className="space-y-2">
               {services.map((s) => (
                 <button
@@ -350,13 +359,13 @@ function PublicBooking() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="font-medium">{s.name}</div>
-                      <div className="text-xs text-muted-foreground">{s.duration_minutes} min</div>
+                      <div className="text-xs text-muted-foreground">{s.duration_minutes} {t("minute")}</div>
                     </div>
                     <div className="font-mono text-gold">{brl(Number(s.price))}</div>
                   </div>
                 </button>
               ))}
-              {services.length === 0 && <p className="text-sm text-muted-foreground">Nenhum serviço disponível.</p>}
+              {services.length === 0 && <p className="text-sm text-muted-foreground">{t("book_no_services")}</p>}
             </div>
           </Card>
         )}
@@ -364,7 +373,7 @@ function PublicBooking() {
         {/* Step 2 — professional */}
         {step === 2 && (
           <Card className="border-border bg-card p-5">
-            <h2 className="mb-4 font-display text-2xl tracking-wide">Escolha o profissional</h2>
+            <h2 className="mb-4 font-display text-2xl tracking-wide">{t("book_choose_professional")}</h2>
             <div className="space-y-2">
               <button
                 onClick={() => { setProfId(""); setStep(3); }}
@@ -372,10 +381,12 @@ function PublicBooking() {
                   profId === "" ? "border-gold bg-gold/5" : "border-border hover:border-gold/40"
                 }`}
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold"><User className="h-5 w-5" /></div>
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gold/10 text-gold">
+                  <User className="h-5 w-5" />
+                </div>
                 <div>
-                  <div className="font-medium">Sem preferência</div>
-                  <div className="text-xs text-muted-foreground">Qualquer profissional disponível</div>
+                  <div className="font-medium">{t("book_no_preference")}</div>
+                  <div className="text-xs text-muted-foreground">{t("book_no_preference_desc")}</div>
                 </div>
               </button>
               {professionalsForService.map((p) => (
@@ -397,7 +408,7 @@ function PublicBooking() {
               ))}
               {professionalsForService.length === 0 && (
                 <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
-                  Nenhum profissional realiza este serviço no momento.
+                  {t("book_no_professionals")}
                 </p>
               )}
             </div>
@@ -407,9 +418,9 @@ function PublicBooking() {
         {/* Step 3 — date and time */}
         {step === 3 && (
           <Card className="border-border bg-card p-5">
-            <h2 className="mb-4 font-display text-2xl tracking-wide">Data e horário</h2>
+            <h2 className="mb-4 font-display text-2xl tracking-wide">{t("book_date_time")}</h2>
             <Label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-              <CalendarDays className="h-3.5 w-3.5" /> Selecione a data
+              <CalendarDays className="h-3.5 w-3.5" /> {t("book_select_date")}
             </Label>
             <div className="mb-5 grid grid-cols-4 gap-2 sm:grid-cols-5">
               {availableDates.slice(0, 20).map((d) => (
@@ -433,7 +444,7 @@ function PublicBooking() {
             {date && (
               <>
                 <Label className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-                  <Clock className="h-3.5 w-3.5" /> Horários disponíveis
+                  <Clock className="h-3.5 w-3.5" /> {t("book_available_times")}
                 </Label>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                   {slots.map((s) => (
@@ -450,7 +461,7 @@ function PublicBooking() {
                 </div>
                 {slots.length === 0 && (
                   <p className="rounded-lg border border-dashed border-border p-3 text-sm text-muted-foreground">
-                    Nenhum horário disponível para esta data. Escolha outro dia ou profissional.
+                    {t("book_no_slots")}
                   </p>
                 )}
               </>
@@ -461,7 +472,7 @@ function PublicBooking() {
               disabled={!date || !time}
               className="mt-5 w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
             >
-              Próximo
+              {t("next")}
             </Button>
           </Card>
         )}
@@ -469,31 +480,31 @@ function PublicBooking() {
         {/* Step 4 — client info */}
         {step === 4 && (
           <Card className="border-border bg-card p-5">
-            <h2 className="mb-4 font-display text-2xl tracking-wide">Seus dados</h2>
+            <h2 className="mb-4 font-display text-2xl tracking-wide">{t("book_your_info")}</h2>
             <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label>Nome completo *</Label>
+                <Label>{t("book_full_name")}</Label>
                 <Input value={name} onChange={(e) => setName(e.target.value)} required />
               </div>
               <div className="space-y-1.5">
-                <Label>WhatsApp *</Label>
+                <Label>{t("book_whatsapp")}</Label>
                 <Input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" />
               </div>
               <div className="space-y-1.5">
-                <Label>E-mail (opcional)</Label>
+                <Label>{t("book_email_opt")}</Label>
                 <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Observações (opcional)</Label>
+                <Label>{t("book_obs_opt")}</Label>
                 <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: degradê alto" />
               </div>
 
               {/* Resumo */}
               <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
-                <div className="text-muted-foreground">Resumo:</div>
+                <div className="text-muted-foreground">{t("book_summary")}</div>
                 <div className="mt-1 space-y-0.5">
                   <div>✂️ {service?.name} — <span className="text-gold">{brl(Number(service?.price ?? 0))}</span></div>
-                  <div>👤 {prof?.name ?? "Sem preferência"}</div>
+                  <div>👤 {prof?.name ?? t("book_no_preference_label")}</div>
                   <div>📅 {date && formatDateBR(date)} às {time}</div>
                 </div>
               </div>
@@ -504,7 +515,7 @@ function PublicBooking() {
                 className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
                 size="lg"
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar agendamento"}
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t("book_confirm_appt")}
               </Button>
             </div>
           </Card>
@@ -516,10 +527,8 @@ function PublicBooking() {
             <div className="mx-auto mb-4 inline-flex h-20 w-20 animate-in zoom-in items-center justify-center rounded-full bg-success/20 text-success">
               <Check className="h-10 w-10" />
             </div>
-            <h1 className="font-display text-3xl tracking-wide">Agendamento confirmado!</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Você receberá a confirmação pelo WhatsApp em instantes.
-            </p>
+            <h1 className="font-display text-3xl tracking-wide">{t("book_success_title")}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">{t("book_success_sub")}</p>
 
             <div className="mt-6 space-y-1.5 rounded-lg border border-border bg-background/40 p-4 text-left text-sm">
               <div>✂️ <strong>{created.service}</strong></div>
@@ -531,14 +540,22 @@ function PublicBooking() {
               </div>
             </div>
 
-            <Button variant="ghost" className="mt-2 w-full" onClick={() => { setStep(0); setServiceId(""); setProfId(""); setDate(""); setTime(""); setName(""); setPhone(""); setEmail(""); setNotes(""); setCreated(null); }}>
-              Fazer novo agendamento
+            <Button
+              variant="ghost"
+              className="mt-2 w-full"
+              onClick={() => {
+                setStep(0); setServiceId(""); setProfId("");
+                setDate(""); setTime(""); setName(""); setPhone("");
+                setEmail(""); setNotes(""); setCreated(null);
+              }}
+            >
+              {t("book_new_appt")}
             </Button>
           </Card>
         )}
 
         <p className="mt-6 text-center text-[10px] uppercase tracking-widest text-muted-foreground">
-          Powered by BarberHub
+          {t("book_powered_by")}
         </p>
       </div>
     </div>

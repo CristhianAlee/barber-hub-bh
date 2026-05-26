@@ -11,24 +11,22 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
-
-const items = [
-  { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/app/agendamentos", label: "Agendamentos", icon: CalendarDays },
-  { to: "/app/clientes", label: "Clientes", icon: Users },
-  { to: "/app/estoque", label: "Estoque", icon: Package },
-  { to: "/app/financeiro", label: "Financeiro", icon: DollarSign },
-  { to: "/app/configuracoes", label: "Configurações", icon: Settings },
-];
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { barbershop, signOut } = useAuth();
+  const { t, language, setLanguage } = useLanguage();
 
-  const handleSignOut = async () => {
-    await signOut();
-  };
+  const items = [
+    { to: "/app", label: t("nav_dashboard"), icon: LayoutDashboard, exact: true },
+    { to: "/app/agendamentos", label: t("nav_appointments"), icon: CalendarDays },
+    { to: "/app/clientes", label: t("nav_clients"), icon: Users },
+    { to: "/app/estoque", label: t("nav_stock"), icon: Package },
+    { to: "/app/financeiro", label: t("nav_financial"), icon: DollarSign },
+    { to: "/app/configuracoes", label: t("nav_settings"), icon: Settings },
+  ];
 
   return (
     <aside className="flex h-full w-full flex-col bg-sidebar text-sidebar-foreground">
@@ -39,7 +37,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
             BARBER<span className="text-gold">HUB</span>
           </div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
-            Gestão Inteligente
+            {t("nav_management")}
           </div>
         </div>
       </div>
@@ -75,14 +73,34 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3">
+      <div className="border-t border-sidebar-border p-3 space-y-2">
+        {/* Language toggle */}
+        <div className="flex items-center justify-center gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-1">
+          <button
+            onClick={() => setLanguage("pt")}
+            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
+              language === "pt" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            PT
+          </button>
+          <button
+            onClick={() => setLanguage("en")}
+            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
+              language === "en" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            EN
+          </button>
+        </div>
+
         <Button
           variant="ghost"
-          onClick={handleSignOut}
+          onClick={signOut}
           className="w-full justify-start text-muted-foreground hover:text-destructive"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          Sair
+          {t("nav_logout")}
         </Button>
       </div>
     </aside>

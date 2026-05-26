@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { getLocalAuthEmail, useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu, Loader2 } from "lucide-react";
@@ -17,13 +18,36 @@ export const Route = createFileRoute("/app")({
   component: AppLayout,
 });
 
+function LangToggle() {
+  const { language, setLanguage } = useLanguage();
+  return (
+    <div className="flex items-center gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5">
+      <button
+        onClick={() => setLanguage("pt")}
+        className={`rounded-md px-2 py-1 text-xs font-semibold transition ${
+          language === "pt" ? "bg-gold text-gold-foreground" : "text-muted-foreground"
+        }`}
+      >
+        PT
+      </button>
+      <button
+        onClick={() => setLanguage("en")}
+        className={`rounded-md px-2 py-1 text-xs font-semibold transition ${
+          language === "en" ? "bg-gold text-gold-foreground" : "text-muted-foreground"
+        }`}
+      >
+        EN
+      </button>
+    </div>
+  );
+}
+
 function AppLayout() {
   const { loading, barbershop, user } = useAuth();
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const path = typeof window !== "undefined" ? window.location.pathname : "";
 
-  // Redirect to onboarding if not done yet (except already on it)
   useEffect(() => {
     if (!loading && barbershop && !barbershop.onboarded && !path.includes("/onboarding")) {
       navigate({ to: "/app/onboarding" });
@@ -32,14 +56,14 @@ function AppLayout() {
 
   if (loading || !user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-gold" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
       <div className="hidden w-64 shrink-0 border-r border-border md:block">
         <AppSidebar />
@@ -54,16 +78,19 @@ function AppLayout() {
               BARBER<span className="text-gold">HUB</span>
             </span>
           </div>
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 border-r-border bg-sidebar p-0">
-              <AppSidebar onNavigate={() => setOpen(false)} />
-            </SheetContent>
-          </Sheet>
+          <div className="flex items-center gap-2">
+            <LangToggle />
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 border-r-border bg-sidebar p-0">
+                <AppSidebar onNavigate={() => setOpen(false)} />
+              </SheetContent>
+            </Sheet>
+          </div>
         </header>
 
         <main className="flex-1 overflow-x-hidden">

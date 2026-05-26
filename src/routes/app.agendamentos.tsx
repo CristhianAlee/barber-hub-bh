@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { localData } from "@/lib/local-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ const dayLabel = (d: Date) =>
 
 function AgendamentosPage() {
   const { barbershop } = useAuth();
+  const { t } = useLanguage();
   const [date, setDate] = useState<Date>(new Date());
   const [appts, setAppts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +82,7 @@ function AgendamentosPage() {
     <div className="space-y-5 p-4 md:p-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="font-display text-3xl tracking-wide md:text-4xl">Agendamentos</h1>
+          <h1 className="font-display text-3xl tracking-wide md:text-4xl">{t("appt_title")}</h1>
           <p className="text-sm capitalize text-muted-foreground">{dayLabel(date)}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -88,7 +90,7 @@ function AgendamentosPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <Button variant="outline" onClick={() => setDate(new Date())}>
-            Hoje
+            {t("appt_today")}
           </Button>
           <Button variant="outline" size="icon" onClick={() => setDate(addDays(date, 1))}>
             <ChevronRight className="h-4 w-4" />
@@ -96,7 +98,7 @@ function AgendamentosPage() {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-gold text-gold-foreground hover:opacity-90">
-                <Plus className="mr-2 h-4 w-4" /> Novo
+                <Plus className="mr-2 h-4 w-4" /> {t("appt_new")}
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-card">
@@ -121,7 +123,7 @@ function AgendamentosPage() {
           </div>
         ) : appts.length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
-            Nenhum agendamento para este dia.
+            {t("appt_empty")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -135,7 +137,7 @@ function AgendamentosPage() {
       <Dialog open={!!checkout} onOpenChange={(o) => !o && setCheckout(null)}>
         <DialogContent className="bg-card max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-display text-2xl tracking-wide">Finalizar atendimento</DialogTitle>
+            <DialogTitle className="font-display text-2xl tracking-wide">{t("checkout_title")}</DialogTitle>
           </DialogHeader>
           {checkout && (
             <Checkout appointment={checkout} onDone={() => { setCheckout(null); load(); }} />
@@ -158,11 +160,12 @@ function AgendamentosPage() {
 }
 
 function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
+  const { t } = useLanguage();
   const statusMap: Record<string, { label: string; cls: string }> = {
-    pending: { label: "Pendente", cls: "bg-muted text-muted-foreground border-border" },
-    confirmed: { label: "Confirmado", cls: "bg-gold/15 text-gold border-gold/30" },
-    completed: { label: "Concluído", cls: "bg-success/15 text-success border-success/30" },
-    cancelled: { label: "Cancelado", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    pending: { label: t("appt_status_pending"), cls: "bg-muted text-muted-foreground border-border" },
+    confirmed: { label: t("appt_status_confirmed"), cls: "bg-gold/15 text-gold border-gold/30" },
+    completed: { label: t("appt_status_completed"), cls: "bg-success/15 text-success border-success/30" },
+    cancelled: { label: t("appt_status_cancelled"), cls: "bg-destructive/15 text-destructive border-destructive/30" },
   };
   const m = statusMap[a.status] ?? statusMap.pending;
   return (
@@ -183,7 +186,7 @@ function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
       <div className="flex w-full gap-2 md:w-auto">
         {a.status === "pending" && (
           <Button size="sm" variant="outline" onClick={() => onAction(a.id, "confirmed")}>
-            <Check className="mr-1 h-3 w-3" /> Confirmar
+            <Check className="mr-1 h-3 w-3" /> {t("appt_confirm")}
           </Button>
         )}
         {a.status === "confirmed" && (
@@ -192,12 +195,12 @@ function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
             className="bg-success text-success-foreground hover:opacity-90"
             onClick={onCheckout}
           >
-            <CheckCircle2 className="mr-1 h-3 w-3" /> Concluir
+            <CheckCircle2 className="mr-1 h-3 w-3" /> {t("appt_complete")}
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && (
           <Button size="sm" variant="outline" onClick={onReschedule}>
-            <CalendarClock className="mr-1 h-3 w-3" /> Reagendar
+            <CalendarClock className="mr-1 h-3 w-3" /> {t("appt_reschedule")}
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && (
@@ -207,7 +210,7 @@ function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
             className="border-destructive/40 text-destructive hover:bg-destructive/10"
             onClick={() => onAction(a.id, "cancelled")}
           >
-            <X className="mr-1 h-3 w-3" /> Cancelar
+            <X className="mr-1 h-3 w-3" /> {t("appt_cancel")}
           </Button>
         )}
       </div>
@@ -217,6 +220,7 @@ function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
 
 function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () => void }) {
   const { barbershop } = useAuth();
+  const { t } = useLanguage();
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
@@ -368,11 +372,11 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="font-display text-2xl tracking-wide">Novo agendamento</DialogTitle>
+        <DialogTitle className="font-display text-2xl tracking-wide">{t("appt_new_title")}</DialogTitle>
       </DialogHeader>
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label>Cliente — telefone</Label>
+          <Label>{t("appt_client_phone")}</Label>
           <Input
             value={phone}
             onChange={(e) => setPhone(formatPhone(e.target.value))}
@@ -380,12 +384,12 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Nome do cliente</Label>
+          <Label>{t("appt_client_name")}</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label>Serviço</Label>
+            <Label>{t("appt_service")}</Label>
             <Select value={serviceId} onValueChange={(v) => { setServiceId(v); setTime(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -398,7 +402,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Profissional</Label>
+            <Label>{t("appt_professional")}</Label>
             <Select value={profId} onValueChange={(v) => { setProfId(v); setTime(""); }}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -410,10 +414,10 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Horário disponível</Label>
+          <Label>{t("appt_available_times")}</Label>
           {slots.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-              Sem horários disponíveis para este profissional nesta data.
+              {t("appt_no_slots")}
             </p>
           ) : (
             <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto">
@@ -433,7 +437,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           )}
         </div>
         <div className="space-y-1.5">
-          <Label>Observações</Label>
+          <Label>{t("appt_obs")}</Label>
           <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
         <Button
@@ -441,7 +445,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
           disabled={saving || !time}
           className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
         </Button>
       </div>
     </>
@@ -450,6 +454,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
 
 function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: () => void }) {
   const { barbershop } = useAuth();
+  const { t } = useLanguage();
   const [nextDate, setNextDate] = useState(appointment.date ?? fmtDate(new Date()));
   const [nextTime, setNextTime] = useState(appointment.time?.slice(0, 5) ?? "");
   const [hours, setHours] = useState<any[]>([]);
@@ -536,7 +541,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
   return (
     <>
       <DialogHeader>
-        <DialogTitle className="font-display text-2xl tracking-wide">Reagendar atendimento</DialogTitle>
+        <DialogTitle className="font-display text-2xl tracking-wide">{t("appt_reschedule_title")}</DialogTitle>
       </DialogHeader>
       <div className="space-y-4">
         <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
@@ -544,13 +549,13 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
           <div className="text-xs text-muted-foreground">{appointment.services?.name} • {appointment.professionals?.name}</div>
         </div>
         <div className="space-y-1.5">
-          <Label>Nova data</Label>
+          <Label>{t("appt_new_date")}</Label>
           <Input type="date" value={nextDate} onChange={(e) => { setNextDate(e.target.value); setNextTime(""); }} />
         </div>
         <div className="space-y-1.5">
-          <Label>Novo horário</Label>
+          <Label>{t("appt_new_time")}</Label>
           {slots.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">Sem horários disponíveis nesta data.</p>
+            <p className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">{t("appt_no_slots2")}</p>
           ) : (
             <div className="grid max-h-48 grid-cols-4 gap-2 overflow-y-auto">
               {slots.map((s) => (
@@ -562,7 +567,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
           )}
         </div>
         <Button onClick={save} disabled={saving || !nextTime} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar reagendamento"}
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("appt_save_reschedule")}
         </Button>
       </div>
     </>

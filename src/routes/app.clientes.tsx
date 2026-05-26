@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { localData } from "@/lib/local-data";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,7 @@ function daysSince(iso: string | null) {
 
 function ClientesPage() {
   const { barbershop } = useAuth();
+  const { t } = useLanguage();
   const [clients, setClients] = useState<Client[]>([]);
   const [activeIds, setActiveIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -54,18 +56,8 @@ function ClientesPage() {
     const since = new Date(Date.now() - DAYS_INACTIVE * 86400000).toISOString().slice(0, 10);
     const today = new Date().toISOString().slice(0, 10);
     const [c, recent] = await Promise.all([
-      localData
-        .from("clients")
-        .select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at")
-        .eq("barbershop_id", barbershop.id)
-        .order("name"),
-      // Active = has confirmed/completed appt within last 30d OR any future pending/confirmed
-      localData
-        .from("appointments")
-        .select("client_id, date, status")
-        .eq("barbershop_id", barbershop.id)
-        .in("status", ["pending", "confirmed", "completed"])
-        .gte("date", since),
+      localData.from("clients").select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at").eq("barbershop_id", barbershop.id).order("name"),
+      localData.from("appointments").select("client_id, date, status").eq("barbershop_id", barbershop.id).in("status", ["pending", "confirmed", "completed"]).gte("date", since),
     ]);
     setClients((c.data as Client[]) ?? []);
     const set = new Set<string>();
@@ -90,10 +82,7 @@ function ClientesPage() {
     );
   }, [clients, search]);
 
-  const inactive = useMemo(
-    () => clients.filter((c) => isInactive(c)),
-    [clients, activeIds]
-  );
+  const inactive = useMemo(() => clients.filter((c) => isInactive(c)), [clients, activeIds]);
 
   const publicLink =
     typeof window !== "undefined" && barbershop
@@ -109,18 +98,17 @@ function ClientesPage() {
   return (
     <div className="space-y-5 p-4 md:p-8">
       <div>
-        <h1 className="font-display text-3xl tracking-wide md:text-4xl">Clientes</h1>
+        <h1 className="font-display text-3xl tracking-wide md:text-4xl">{t("clients_title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {clients.length} cliente{clients.length !== 1 && "s"} cadastrado
-          {clients.length !== 1 && "s"}
+          {clients.length} cliente{clients.length !== 1 && "s"} cadastrado{clients.length !== 1 && "s"}
         </p>
       </div>
 
       <Tabs defaultValue="lista">
         <TabsList>
-          <TabsTrigger value="lista"><Users className="mr-2 h-3.5 w-3.5" />Lista</TabsTrigger>
+          <TabsTrigger value="lista"><Users className="mr-2 h-3.5 w-3.5" />{t("clients_list")}</TabsTrigger>
           <TabsTrigger value="lembretes">
-            <Bell className="mr-2 h-3.5 w-3.5" />Lembretes
+            <Bell className="mr-2 h-3.5 w-3.5" />{t("clients_reminders")}
             {inactive.length > 0 && (
               <Badge className="ml-2 border-destructive/40 bg-destructive/15 text-destructive">
                 {inactive.length}
@@ -135,7 +123,7 @@ function ClientesPage() {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou telefone"
+              placeholder={t("clients_search")}
               className="pl-9"
             />
           </div>
@@ -149,7 +137,7 @@ function ClientesPage() {
               </div>
             ) : filtered.length === 0 ? (
               <div className="py-12 text-center text-sm text-muted-foreground">
-                {clients.length === 0 ? "Nenhum cliente ainda." : "Nenhum resultado."}
+                {clients.length === 0 ? t("clients_none") : t("clients_no_results")}
               </div>
             ) : (
               <div className="space-y-1">
@@ -170,17 +158,16 @@ function ClientesPage() {
                           <span className="truncate font-medium">{c.name}</span>
                           {inactiveBadge && (
                             <Badge className="border-destructive/40 bg-destructive/15 text-destructive font-normal">
-                              Inativo
+                              {t("clients_inactive_badge")}
                             </Badge>
                           )}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {formatPhone(c.phone)} • {c.total_visits} visita
-                          {c.total_visits !== 1 && "s"} • {brl(Number(c.total_spent))}
+                          {formatPhone(c.phone)} • {c.total_visits} visita{c.total_visits !== 1 && "s"} • {brl(Number(c.total_spent))}
                         </div>
                       </div>
                       <div className="hidden text-right text-xs text-muted-foreground sm:block">
-                        {c.last_visit ? `${days}d atrás` : "Nunca veio"}
+                        {c.last_visit ? `${days}${t("clients_days_ago")}` : t("clients_never")}
                       </div>
                     </button>
                   );
@@ -192,27 +179,17 @@ function ClientesPage() {
 
         <TabsContent value="lembretes" className="space-y-4">
           <Card className="border-border bg-card p-5">
-            <h2 className="font-display text-xl tracking-wide">Mensagem padrão</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Use {`{nome}, {barbearia}, {link}`} como variáveis automáticas.
-            </p>
-            <Textarea
-              value={reminderMsg}
-              onChange={(e) => setReminderMsg(e.target.value)}
-              rows={3}
-              className="mt-3"
-            />
+            <h2 className="font-display text-xl tracking-wide">{t("clients_std_msg")}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t("clients_vars_hint")}</p>
+            <Textarea value={reminderMsg} onChange={(e) => setReminderMsg(e.target.value)} rows={3} className="mt-3" />
           </Card>
 
           <Card className="border-border bg-card p-2 md:p-4">
             <div className="px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">
-              {inactive.length} cliente{inactive.length !== 1 && "s"} inativo
-              {inactive.length !== 1 && "s"} (mais de {DAYS_INACTIVE} dias)
+              {inactive.length} {t("clients_inactive_list")}
             </div>
             {inactive.length === 0 ? (
-              <div className="py-12 text-center text-sm text-muted-foreground">
-                Nenhum cliente inativo. 🎉
-              </div>
+              <div className="py-12 text-center text-sm text-muted-foreground">{t("clients_no_inactive")}</div>
             ) : (
               <div className="space-y-1">
                 {inactive.map((c) => (
@@ -226,11 +203,7 @@ function ClientesPage() {
                         {c.last_visit ? `Última visita ${daysSince(c.last_visit)}d atrás` : "Sem visitas"}
                       </div>
                     </div>
-                    <a
-                      href={`https://wa.me/55${c.phone}?text=${encodeURIComponent(buildReminder(c))}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a href={`https://wa.me/55${c.phone}?text=${encodeURIComponent(buildReminder(c))}`} target="_blank" rel="noreferrer">
                       <Button size="sm" className="bg-success text-success-foreground hover:opacity-90">
                         <MessageCircle className="mr-1 h-3.5 w-3.5" />WhatsApp
                       </Button>
@@ -253,6 +226,7 @@ function ClientesPage() {
 }
 
 function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: Client) => void }) {
+  const { t } = useLanguage();
   const [history, setHistory] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [notes, setNotes] = useState(client.notes ?? "");
@@ -264,25 +238,13 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
     (async () => {
       setLoading(true);
       const [appts, salesItems] = await Promise.all([
-        localData
-          .from("appointments")
-          .select("id, date, time, status, services(name, price), professionals(name)")
-          .eq("client_id", client.id)
-          .order("date", { ascending: false })
-          .limit(50),
-        localData
-          .from("sales")
-          .select("id, created_at, total_amount, sale_items(name, quantity, type, unit_price)")
-          .eq("client_id", client.id)
-          .order("created_at", { ascending: false })
-          .limit(50),
+        localData.from("appointments").select("id, date, time, status, services(name, price), professionals(name)").eq("client_id", client.id).order("date", { ascending: false }).limit(50),
+        localData.from("sales").select("id, created_at, total_amount, sale_items(name, quantity, type, unit_price)").eq("client_id", client.id).order("created_at", { ascending: false }).limit(50),
       ]);
       setHistory(appts.data ?? []);
       const items: any[] = [];
       (salesItems.data ?? []).forEach((s: any) => {
-        (s.sale_items ?? [])
-          .filter((it: any) => it.type === "product")
-          .forEach((it: any) => items.push({ ...it, date: s.created_at }));
+        (s.sale_items ?? []).filter((it: any) => it.type === "product").forEach((it: any) => items.push({ ...it, date: s.created_at }));
       });
       setProducts(items);
       setLoading(false);
@@ -306,15 +268,15 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
 
       <div className="grid grid-cols-3 gap-2 text-center">
         <Card className="bg-background/40 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Visitas</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("clients_visits")}</div>
           <div className="font-mono text-xl font-bold">{client.total_visits}</div>
         </Card>
         <Card className="bg-background/40 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Gasto</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("clients_spent")}</div>
           <div className="font-mono text-xl font-bold text-gold">{brl(Number(client.total_spent))}</div>
         </Card>
         <Card className="bg-background/40 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Última</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("clients_last")}</div>
           <div className="font-mono text-xs">
             {client.last_visit ? `${daysSince(client.last_visit)}d atrás` : "—"}
           </div>
@@ -327,23 +289,23 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
       </div>
 
       <div className="space-y-1.5">
-        <Label>Observações (alergias, preferências)</Label>
+        <Label>{t("clients_notes")}</Label>
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
         <Button size="sm" onClick={saveNotes} disabled={saving} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="mr-1 h-3.5 w-3.5" /> Salvar</>}
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="mr-1 h-3.5 w-3.5" /> {t("save")}</>}
         </Button>
       </div>
 
       <Tabs defaultValue="historico">
         <TabsList className="w-full">
-          <TabsTrigger value="historico" className="flex-1">Atendimentos</TabsTrigger>
-          <TabsTrigger value="produtos" className="flex-1">Produtos</TabsTrigger>
+          <TabsTrigger value="historico" className="flex-1">{t("clients_appointments")}</TabsTrigger>
+          <TabsTrigger value="produtos" className="flex-1">{t("clients_products")}</TabsTrigger>
         </TabsList>
         <TabsContent value="historico" className="mt-3 space-y-1.5">
           {loading ? (
             <div className="h-20 animate-pulse rounded bg-muted/30" />
           ) : history.length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">Sem atendimentos.</p>
+            <p className="py-6 text-center text-xs text-muted-foreground">{t("clients_no_appointments")}</p>
           ) : (
             history.map((h) => (
               <div key={h.id} className="flex items-center gap-3 rounded border border-border bg-background/40 p-2 text-xs">
@@ -358,7 +320,7 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
           {loading ? (
             <div className="h-20 animate-pulse rounded bg-muted/30" />
           ) : products.length === 0 ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">Nenhum produto comprado.</p>
+            <p className="py-6 text-center text-xs text-muted-foreground">{t("clients_no_products")}</p>
           ) : (
             products.map((p, i) => (
               <div key={i} className="flex items-center gap-3 rounded border border-border bg-background/40 p-2 text-xs">

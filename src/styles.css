@@ -150,3 +150,17 @@
     box-shadow: 0 0 0 1px oklch(0.78 0.14 75 / 0.3), 0 0 24px oklch(0.78 0.14 75 / 0.25);
   }
 }
+
+/* ── Recharts: remove white background and prevent text selection on axis labels */
+.recharts-wrapper,
+.recharts-surface {
+  background: transparent !important;
+}
+.recharts-layer rect.recharts-cartesian-grid-bg {
+  fill: transparent !important;
+}
+.recharts-text,
+.recharts-cartesian-axis-tick-value {
+  user-select: none;
+  -webkit-user-select: none;
+}

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { localData } from "@/lib/local-data";
+import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { formatPhone, onlyDigits, passwordStrength } from "@/lib/format";
@@ -15,6 +16,7 @@ export const Route = createFileRoute("/auth/signup")({
 
 function Signup() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     name: "",
     barbershop: "",
@@ -64,20 +66,20 @@ function Signup() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl tracking-wide">Criar conta</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Comece a gerenciar sua barbearia em minutos</p>
+      <h1 className="font-display text-3xl tracking-wide">{t("auth_signup_title")}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">{t("auth_signup_sub")}</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="name">Seu nome completo</Label>
+          <Label htmlFor="name">{t("name")}</Label>
           <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="bs">Nome da barbearia</Label>
+          <Label htmlFor="bs">{t("auth_bname")}</Label>
           <Input id="bs" value={form.barbershop} onChange={(e) => setForm({ ...form, barbershop: e.target.value })} required />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="phone">WhatsApp</Label>
+          <Label htmlFor="phone">{t("phone")}</Label>
           <Input
             id="phone"
             inputMode="tel"
@@ -88,11 +90,11 @@ function Signup() {
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="email">E-mail</Label>
+          <Label htmlFor="email">{t("auth_email")}</Label>
           <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="pw">Senha</Label>
+          <Label htmlFor="pw">{t("auth_password")}</Label>
           <Input
             id="pw"
             type="password"
@@ -153,14 +155,14 @@ function Signup() {
           disabled={!valid || loading}
           className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
         >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar conta grátis"}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("auth_signup_btn")}
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        Já tem conta?{" "}
+        {t("auth_has_account")}{" "}
         <Link to="/auth/login" className="text-gold hover:underline">
-          Entrar
+          {t("auth_login_link")}
         </Link>
       </p>
     </div>
