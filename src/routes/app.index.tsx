@@ -2,13 +2,20 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { brl } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, DollarSign, Scissors, AlertTriangle, UserPlus, ExternalLink, Copy } from "lucide-react";
+import {
+  CalendarDays, DollarSign, Scissors, AlertTriangle,
+  UserPlus, ExternalLink, Copy, Package, Users,
+} from "lucide-react";
 import { toast } from "sonner";
+import {
+  Line, LineChart, ResponsiveContainer, XAxis, YAxis,
+  Tooltip, CartesianGrid,
+} from "recharts";
 
 export const Route = createFileRoute("/app/")({
   component: Dashboard,
@@ -21,44 +28,82 @@ type Stats = {
   lowStock: number;
 };
 
+type ChartPoint = { day: string; thisWeek: number; prevWeek: number };
+
+const fmtD = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+};
+
 function Dashboard() {
   const { barbershop } = useAuth();
   const { t } = useLanguage();
   const [stats, setStats] = useState<Stats>({
-    todayRevenue: 0,
-    todayAppointments: 0,
-    newClientsMonth: 0,
-    lowStock: 0,
+    todayRevenue: 0, todayAppointments: 0, newClientsMonth: 0, lowStock: 0,
   });
   const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [inactiveCount, setInactiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const today = new Date().toISOString().slice(0, 10);
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      const monthIso = monthStart.toISOString();
+      const today = fmtD(new Date());
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+      const thirtyDaysAgo = fmtD(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
-      const [salesRes, apptsRes, clientsRes, productsRes, upcomingRes] = await Promise.all([
-        localData.from("sales").select("total_amount, created_at").eq("barbershop_id", barbershop.id).gte("created_at", `${today}T00:00:00`),
-        localData.from("appointments").select("id").eq("barbershop_id", barbershop.id).eq("date", today),
-        localData.from("clients").select("id").eq("barbershop_id", barbershop.id).gte("created_at", monthIso),
-        localData.from("products").select("id, stock_quantity, min_stock_alert").eq("barbershop_id", barbershop.id),
-        localData.from("appointments").select("id, time, status, notes, clients(name), services(name, price), professionals(name)").eq("barbershop_id", barbershop.id).eq("date", today).order("time").limit(5),
-      ]);
+      // Build 14-day date array (index 0 = 13 days ago, index 13 = today)
+      const dates14: string[] = [];
+      for (let i = 13; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        dates14.push(fmtD(d));
+      }
+      const date14ago = new Date(); date14ago.setDate(date14ago.getDate() - 14);
 
-      const lowStock = (productsRes.data ?? []).filter((p: any) => p.stock_quantity <= p.min_stock_alert).length;
+      const [salesRes, apptsRes, clientsMonthRes, productsRes, upcomingRes, finRes, clientsAllRes] =
+        await Promise.all([
+          supabase.from("sales").select("total_amount").eq("barbershop_id", barbershop.id).gte("created_at", `${today}T00:00:00`),
+          supabase.from("appointments").select("id").eq("barbershop_id", barbershop.id).eq("date", today),
+          supabase.from("clients").select("id").eq("barbershop_id", barbershop.id).gte("created_at", monthStart.toISOString()),
+          supabase.from("products").select("id, stock_quantity, min_stock_alert").eq("barbershop_id", barbershop.id),
+          supabase.from("appointments").select("id, time, status, clients(name), services(name, price), professionals(name)").eq("barbershop_id", barbershop.id).eq("date", today).order("time").limit(5),
+          supabase.from("financial_entries").select("date, amount").eq("barbershop_id", barbershop.id).gte("date", fmtD(date14ago)).eq("type", "income"),
+          supabase.from("clients").select("id, last_visit").eq("barbershop_id", barbershop.id),
+        ]);
+
+      const lowStock = (productsRes.data ?? []).filter((p: any) => Number(p.stock_quantity) <= Number(p.min_stock_alert)).length;
       const todayRevenue = (salesRes.data ?? []).reduce((s: number, r: any) => s + Number(r.total_amount || 0), 0);
 
       setStats({
         todayRevenue,
         todayAppointments: apptsRes.data?.length ?? 0,
-        newClientsMonth: clientsRes.data?.length ?? 0,
+        newClientsMonth: clientsMonthRes.data?.length ?? 0,
         lowStock,
       });
       setUpcoming(upcomingRes.data ?? []);
+
+      // 7-day chart: previous week vs current week
+      const byDate: Record<string, number> = {};
+      for (const e of finRes.data ?? []) {
+        byDate[(e as any).date] = (byDate[(e as any).date] ?? 0) + Number((e as any).amount);
+      }
+      setChartData(
+        dates14.slice(7).map((date, i) => ({
+          day: new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).slice(0, 3),
+          thisWeek: byDate[date] ?? 0,
+          prevWeek: byDate[dates14[i]] ?? 0,
+        }))
+      );
+
+      // Inactive clients
+      const inactive = (clientsAllRes.data ?? []).filter(
+        (c: any) => !c.last_visit || c.last_visit < thirtyDaysAgo
+      ).length;
+      setInactiveCount(inactive);
+
       setLoading(false);
     })();
   }, [barbershop]);
@@ -111,8 +156,89 @@ function Dashboard() {
         <MetricCard icon={AlertTriangle} label={t("dash_low_stock")} value={String(stats.lowStock)} warning={stats.lowStock > 0} />
       </div>
 
+      {/* Alert cards */}
+      {(stats.lowStock > 0 || inactiveCount > 0) && (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {stats.lowStock > 0 && (
+            <Link to="/app/estoque" className="flex-1">
+              <div className="flex items-center gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-4 transition hover:bg-destructive/15">
+                <Package className="h-5 w-5 shrink-0 text-destructive" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-destructive">{t("dash_alert_stock_title")}</div>
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-bold text-destructive">{stats.lowStock}</span> {t("dash_alert_stock_body")}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )}
+          {inactiveCount > 0 && (
+            <Link to="/app/clientes" className="flex-1">
+              <div className="flex items-center gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4 transition hover:bg-warning/15">
+                <Users className="h-5 w-5 shrink-0 text-warning" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-warning">{t("dash_alert_inactive_title")}</div>
+                  <div className="text-xs text-muted-foreground">
+                    <span className="font-bold text-warning">{inactiveCount}</span> {t("dash_alert_inactive_body")}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* 7-day chart */}
+      <Card className="border-border bg-card p-5">
+        <h2 className="mb-4 font-display text-xl tracking-wide">{t("dash_chart_title")}</h2>
+        {loading ? (
+          <div className="h-48 animate-pulse rounded bg-muted/30" />
+        ) : (
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.30 0 0)" vertical={false} />
+                <XAxis dataKey="day" tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} width={36} tickFormatter={(v) => v > 0 ? `${(v / 1000).toFixed(0)}k` : "0"} />
+                <Tooltip
+                  contentStyle={{ background: "oklch(0.14 0 0)", border: "1px solid oklch(0.26 0 0)", borderRadius: 10, fontSize: 12, color: "oklch(0.92 0 0)" }}
+                  labelStyle={{ color: "oklch(0.78 0.14 75)", fontWeight: 600, marginBottom: 4 }}
+                  formatter={(v: number, name: string) => [brl(v), name === "thisWeek" ? t("dash_chart_this_week") : t("dash_chart_prev_week")]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="thisWeek"
+                  stroke="oklch(0.78 0.14 75)"
+                  strokeWidth={2.5}
+                  dot={{ fill: "oklch(0.78 0.14 75)", r: 4, strokeWidth: 0 }}
+                  activeDot={{ r: 6, strokeWidth: 0 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="prevWeek"
+                  stroke="oklch(0.50 0 0)"
+                  strokeWidth={1.5}
+                  strokeDasharray="5 4"
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+        <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-2 w-6 rounded-full bg-gold" />
+            {t("dash_chart_this_week")}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="inline-block h-px w-6 border-t-2 border-dashed border-muted-foreground" />
+            {t("dash_chart_prev_week")}
+          </span>
+        </div>
+      </Card>
+
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Próximos */}
+        {/* Próximos agendamentos */}
         <Card className="border-border bg-card p-5 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-xl tracking-wide">{t("dash_upcoming")}</h2>

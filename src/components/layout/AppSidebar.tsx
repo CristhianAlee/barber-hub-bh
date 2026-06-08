@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -8,22 +9,42 @@ import {
   Settings,
   LogOut,
   Scissors,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
+import { useTheme } from "@/hooks/useTheme";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 
 export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { barbershop, signOut } = useAuth();
   const { t, language, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
+  const [criticalCount, setCriticalCount] = useState(0);
+
+  useEffect(() => {
+    if (!barbershop) return;
+    supabase
+      .from("products")
+      .select("stock_quantity, min_stock_alert")
+      .eq("barbershop_id", barbershop.id)
+      .then(({ data }: { data: any[] | null }) => {
+        const count = (data ?? []).filter(
+          (p: any) => Number(p.stock_quantity) <= Number(p.min_stock_alert),
+        ).length;
+        setCriticalCount(count);
+      });
+  }, [barbershop]);
 
   const items = [
     { to: "/app", label: t("nav_dashboard"), icon: LayoutDashboard, exact: true },
     { to: "/app/agendamentos", label: t("nav_appointments"), icon: CalendarDays },
     { to: "/app/clientes", label: t("nav_clients"), icon: Users },
-    { to: "/app/estoque", label: t("nav_stock"), icon: Package },
+    { to: "/app/estoque", label: t("nav_stock"), icon: Package, badge: criticalCount > 0 ? criticalCount : 0 },
     { to: "/app/financeiro", label: t("nav_financial"), icon: DollarSign },
     { to: "/app/configuracoes", label: t("nav_settings"), icon: Settings },
   ];
@@ -66,31 +87,46 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               }`}
             >
-              <it.icon className="h-4 w-4" />
-              {it.label}
+              <it.icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1">{it.label}</span>
+              {(it as any).badge > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
+                  {(it as any).badge}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
       <div className="border-t border-sidebar-border p-3 space-y-2">
-        {/* Language toggle */}
-        <div className="flex items-center justify-center gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-1">
+        {/* Language + theme toggles */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar-accent/30 p-1">
+            <button
+              onClick={() => setLanguage("pt")}
+              className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
+                language === "pt" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              PT
+            </button>
+            <button
+              onClick={() => setLanguage("en")}
+              className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
+                language === "en" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              EN
+            </button>
+          </div>
+
           <button
-            onClick={() => setLanguage("pt")}
-            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
-              language === "pt" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
+            onClick={toggleTheme}
+            title={theme === "dark" ? t("theme_toggle_light") : t("theme_toggle_dark")}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sidebar-border bg-sidebar-accent/30 text-muted-foreground transition hover:border-gold/40 hover:text-gold"
           >
-            PT
-          </button>
-          <button
-            onClick={() => setLanguage("en")}
-            className={`flex-1 rounded-md py-1.5 text-xs font-semibold transition ${
-              language === "en" ? "bg-gold text-gold-foreground" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            EN
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
         </div>
 

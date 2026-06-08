@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { localData } from "@/lib/local-data";
+import { authService } from "@/services/authService";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -25,6 +26,7 @@ function Signup() {
     password: "",
     confirm: "",
     terms: false,
+    marketing: false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -43,23 +45,28 @@ function Signup() {
     e.preventDefault();
     if (!valid) return;
     setLoading(true);
-    const { error } = await localData.auth.signUp({
-      email: form.email,
-      password: form.password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/app`,
-        data: {
-          full_name: form.name,
-          barbershop_name: form.barbershop,
-          phone: phoneDigits,
-        },
-      },
+    const { error } = await authService.signUp(form.email, form.password, {
+      fullName: form.name,
+      barbershopName: form.barbershop,
+      phone: phoneDigits,
     });
-    setLoading(false);
     if (error) {
-      toast.error(error.message.includes("already") ? "Este e-mail já está cadastrado" : "Erro ao criar conta");
+      setLoading(false);
+      toast.error(error.includes("already") ? "Este e-mail já está cadastrado" : "Erro ao criar conta");
       return;
     }
+    // Save LGPD consent record
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from("user_consents").insert({
+        user_id: user.id,
+        terms_accepted_at: new Date().toISOString(),
+        terms_version: "2025-06",
+        marketing_consent: form.marketing,
+        cookie_consent: localStorage.getItem("barberhub-cookie-consent") ?? "essential-only",
+      }).select().maybeSingle();
+    }
+    setLoading(false);
     toast.success("Conta criada! Verifique seu e-mail");
     navigate({ to: "/auth/verify", search: { email: form.email } });
   };
@@ -143,10 +150,32 @@ function Signup() {
           <Checkbox
             checked={form.terms}
             onCheckedChange={(v) => setForm({ ...form, terms: !!v })}
-            className="mt-0.5"
+            className="mt-0.5 shrink-0"
           />
           <span>
-            Aceito os termos de uso e política de privacidade do BarberHub
+            Li e concordo com os{" "}
+            <Link to="/termos" target="_blank" rel="noopener" className="text-gold hover:underline">
+              Termos de Uso
+            </Link>{" "}
+            e a{" "}
+            <Link to="/privacidade" target="_blank" rel="noopener" className="text-gold hover:underline">
+              Política de Privacidade
+            </Link>{" "}
+            do BarberHub. <span className="text-destructive">*</span>
+          </span>
+        </label>
+        {!form.terms && form.name && (
+          <p className="text-xs text-destructive">Você precisa aceitar os termos para criar uma conta</p>
+        )}
+        <label className="flex items-start gap-2 text-sm text-muted-foreground">
+          <Checkbox
+            checked={form.marketing}
+            onCheckedChange={(v) => setForm({ ...form, marketing: !!v })}
+            className="mt-0.5 shrink-0"
+          />
+          <span>
+            Aceito receber novidades e dicas do BarberHub por e-mail.
+            Você pode cancelar a qualquer momento.
           </span>
         </label>
 

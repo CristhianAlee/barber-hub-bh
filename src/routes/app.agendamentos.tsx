@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +54,7 @@ function AgendamentosPage() {
   const load = async () => {
     if (!barbershop) return;
     setLoading(true);
-    const { data } = await localData
+    const { data } = await supabase
       .from("appointments")
       .select(
         "id, time, status, notes, duration_minutes, professional_id, client_id, service_id, clients(name, phone), services(name, price, duration_minutes), professionals(name)"
@@ -72,7 +72,7 @@ function AgendamentosPage() {
   }, [date, barbershop]);
 
   const updateStatus = async (id: string, status: "pending" | "confirmed" | "completed" | "cancelled") => {
-    const { error } = await localData.from("appointments").update({ status }).eq("id", id);
+    const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) return toast.error("Erro ao atualizar");
     toast.success("Status atualizado");
     load();
@@ -239,11 +239,11 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     if (!barbershop) return;
     (async () => {
       const [s, p, h, ph, ps] = await Promise.all([
-        localData.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", barbershop.id).eq("active", true),
-        localData.from("professionals").select("id, name").eq("barbershop_id", barbershop.id).eq("active", true),
-        localData.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
-        localData.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
-        localData.from("professional_services").select("professional_id, service_id").eq("barbershop_id", barbershop.id),
+        supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", barbershop.id).eq("active", true),
+        supabase.from("professionals").select("id, name").eq("barbershop_id", barbershop.id).eq("active", true),
+        supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+        supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+        supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", barbershop.id),
       ]);
       setServices(s.data ?? []);
       setProfs(p.data ?? []);
@@ -259,7 +259,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
   useEffect(() => {
     if (!barbershop || !profId) { setBusy([]); return; }
     (async () => {
-      const { data } = await localData
+      const { data } = await supabase
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", barbershop.id)
@@ -313,7 +313,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     setSaving(true);
 
     // Conflict guard
-    const { data: clash } = await localData
+    const { data: clash } = await supabase
       .from("appointments")
       .select("id")
       .eq("barbershop_id", barbershop.id)
@@ -327,7 +327,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
     }
 
     const phoneDigits = onlyDigits(phone);
-    const { data: existing } = await localData
+    const { data: existing } = await supabase
       .from("clients")
       .select("id")
       .eq("barbershop_id", barbershop.id)
@@ -335,7 +335,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       .maybeSingle();
     let clientId = existing?.id;
     if (!clientId) {
-      const { data: newClient, error: cErr } = await localData
+      const { data: newClient, error: cErr } = await supabase
         .from("clients")
         .insert({ barbershop_id: barbershop.id, name, phone: phoneDigits })
         .select("id")
@@ -348,7 +348,7 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
       clientId = newClient.id;
     }
     const svc = services.find((s) => s.id === serviceId);
-    const { error } = await localData.from("appointments").insert({
+    const { error } = await supabase.from("appointments").insert({
       barbershop_id: barbershop.id,
       professional_id: profId,
       client_id: clientId,
@@ -465,8 +465,8 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
   useEffect(() => {
     if (!barbershop) return;
     Promise.all([
-      localData.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
-      localData.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+      supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
+      supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", barbershop.id),
     ]).then(([h, ph]) => {
       setHours(h.data ?? []);
       setProfessionalHours(ph.data ?? []);
@@ -475,7 +475,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
 
   useEffect(() => {
     if (!barbershop || !nextDate) return;
-    localData
+    supabase
       .from("appointments")
       .select("id, time, duration_minutes, professional_id")
       .eq("barbershop_id", barbershop.id)
@@ -515,7 +515,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
   const save = async () => {
     if (!barbershop || !nextDate || !nextTime) return toast.error("Escolha data e horário");
     setSaving(true);
-    const { data: clash } = await localData
+    const { data: clash } = await supabase
       .from("appointments")
       .select("id")
       .eq("barbershop_id", barbershop.id)
@@ -528,7 +528,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
       setSaving(false);
       return toast.error("Horário já ocupado, escolha outro");
     }
-    const { error } = await localData
+    const { error } = await supabase
       .from("appointments")
       .update({ date: nextDate, time: nextTime, status: "confirmed" })
       .eq("id", appointment.id);

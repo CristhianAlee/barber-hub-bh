@@ -1,6 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +72,7 @@ function PublicBooking() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: b, error: bErr } = await localData
+        const { data: b, error: bErr } = await supabase
           .from("barbershops")
           .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
           .eq("slug", slug)
@@ -81,11 +81,11 @@ function PublicBooking() {
         if (!b) { setLoading(false); return; }
         setBs(b);
         const [s, p, h, ph, ps] = await Promise.all([
-          localData.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
-          localData.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
-          localData.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
-          localData.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
-          localData.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
+          supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          supabase.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
         ]);
         setServices(s.data ?? []);
         setProfs(p.data ?? []);
@@ -141,7 +141,7 @@ function PublicBooking() {
       if (candidateProfs.length === 0) { setSlots([]); return; }
 
       const interval = bs.booking_interval_minutes ?? 30;
-      const { data: existing } = await localData
+      const { data: existing } = await supabase
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
@@ -189,7 +189,7 @@ function PublicBooking() {
     let finalProfId = profId;
     if (!finalProfId) {
       const dow = new Date(date + "T00:00:00").getDay();
-      const { data: existing } = await localData
+      const { data: existing } = await supabase
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", bs.id)
@@ -213,7 +213,7 @@ function PublicBooking() {
 
     setSubmitting(true);
 
-    const { data: clash } = await localData
+    const { data: clash } = await supabase
       .from("appointments")
       .select("id")
       .eq("barbershop_id", bs.id)
@@ -233,7 +233,7 @@ function PublicBooking() {
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-    const { error: clientError } = await localData
+    const { error: clientError } = await supabase
       .from("clients")
       .insert({ id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null });
     if (clientError) {
@@ -251,7 +251,7 @@ function PublicBooking() {
       status: "pending" as const,
       notes: notes || null,
     };
-    const { error } = await localData.from("appointments").insert(apptPayload);
+    const { error } = await supabase.from("appointments").insert(apptPayload);
     if (error) {
       setSubmitting(false);
       if (error.code === "23505") { setTime(""); return toast.error("Horário já ocupado, escolha outro"); }
@@ -509,6 +509,10 @@ function PublicBooking() {
                 </div>
               </div>
 
+              <p className="rounded-md bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                Ao confirmar, você concorda que seus dados (nome e telefone) serão usados exclusivamente
+                para gerenciar este agendamento.
+              </p>
               <Button
                 onClick={submit}
                 disabled={submitting || !name.trim() || onlyDigits(phone).length < 10}

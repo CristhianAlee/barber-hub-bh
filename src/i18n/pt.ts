@@ -314,6 +314,29 @@ export const pt = {
   book_no_services: "Nenhum serviço disponível.",
   book_no_professionals: "Nenhum profissional realiza este serviço no momento.",
 
+  // ── Tema
+  theme_toggle_dark: "Tema escuro",
+  theme_toggle_light: "Tema claro",
+
+  // ── Dashboard — gráfico e alertas
+  dash_chart_title: "Faturamento — últimos 7 dias",
+  dash_chart_this_week: "Esta semana",
+  dash_chart_prev_week: "Semana anterior",
+  dash_alert_stock_title: "Estoque crítico",
+  dash_alert_stock_body: "produto(s) abaixo do mínimo",
+  dash_alert_inactive_title: "Clientes inativos",
+  dash_alert_inactive_body: "cliente(s) sem visita há mais de 30 dias",
+
+  // ── Financeiro — filtros de período
+  fin_period_today: "Hoje",
+  fin_period_7d: "7 dias",
+  fin_period_30d: "30 dias",
+  fin_period_month: "Este mês",
+  fin_period_last: "Mês passado",
+  fin_period_custom: "Personalizado",
+  fin_custom_from: "De",
+  fin_custom_to: "Até",
+
   // ── Checkout
   checkout_client: "Cliente",
   checkout_base_service: "Serviço agendado",

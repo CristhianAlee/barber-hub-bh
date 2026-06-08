@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { localData } from "@/lib/local-data";
+import { authService } from "@/services/authService";
 import { toast } from "sonner";
 import { Loader2, MailCheck } from "lucide-react";
 
@@ -19,9 +19,7 @@ function Recover() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await localData.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset`,
-    });
+    const { error } = await authService.resetPassword(email);
     setLoading(false);
     if (error) {
       toast.error("Não foi possível enviar o e-mail");

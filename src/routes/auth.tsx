@@ -1,12 +1,12 @@
 import { createFileRoute, Outlet, Link, redirect } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
-import { getLocalAuthEmail } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/auth")({
   beforeLoad: async ({ location }) => {
-    // If already logged in, send to /app — except on the reset page (recovery flow)
     if (location.pathname.includes("/auth/reset")) return;
-    if (getLocalAuthEmail()) throw redirect({ to: "/app" });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) throw redirect({ to: "/app" });
   },
   component: AuthLayout,
 });

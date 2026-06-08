@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, CheckCircle2, Loader2 } from "lucide-react";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth/verify")({
@@ -19,7 +19,7 @@ function Verify() {
   const resend = async () => {
     if (!email) return toast.error("E-mail não informado");
     setResending(true);
-    const { error } = await localData.auth.resend({
+    const { error } = await supabase.auth.resend({
       type: "signup",
       email,
       options: { emailRedirectTo: `${window.location.origin}/app` },

@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,8 @@ type Entry = {
   payment_method: string | null;
 };
 
+type Period = "today" | "7d" | "30d" | "month" | "last_month" | "custom";
+
 const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
 
 function FinanceiroPage() {
@@ -41,25 +43,55 @@ function FinanceiroPage() {
   const [page, setPage] = useState(0);
   const PER_PAGE = 20;
 
-  const monthStart = useMemo(() => {
-    const d = new Date(); d.setDate(1); d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
+  const [period, setPeriod] = useState<Period>("month");
+  const [customFrom, setCustomFrom] = useState(fmtDate(new Date()));
+  const [customTo, setCustomTo] = useState(fmtDate(new Date()));
+
+  function getDateRange(): { from: string; to: string } {
+    const now = new Date();
+    const today = fmtDate(now);
+    switch (period) {
+      case "today": return { from: today, to: today };
+      case "7d": {
+        const d = new Date(); d.setDate(d.getDate() - 6);
+        return { from: fmtDate(d), to: today };
+      }
+      case "30d": {
+        const d = new Date(); d.setDate(d.getDate() - 29);
+        return { from: fmtDate(d), to: today };
+      }
+      case "month": {
+        const d = new Date(); d.setDate(1);
+        return { from: fmtDate(d), to: today };
+      }
+      case "last_month": {
+        const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const last = new Date(now.getFullYear(), now.getMonth(), 0);
+        return { from: fmtDate(first), to: fmtDate(last) };
+      }
+      case "custom": return { from: customFrom, to: customTo };
+    }
+  }
 
   const load = async () => {
     if (!barbershop) return;
+    const { from, to } = getDateRange();
     setLoading(true);
-    const { data } = await localData
+    const { data } = await supabase
       .from("financial_entries")
       .select("id, date, type, category, description, amount, payment_method")
       .eq("barbershop_id", barbershop.id)
-      .gte("date", fmtDate(monthStart))
+      .gte("date", from)
+      .lte("date", to)
       .order("date", { ascending: false });
     setEntries((data as Entry[]) ?? []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [barbershop]);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barbershop, period, customFrom, customTo]);
 
   const monthly = useMemo(() => {
     const inc = entries.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
@@ -91,6 +123,15 @@ function FinanceiroPage() {
   const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
 
+  const periodLabels: Record<Period, string> = {
+    today: t("fin_period_today"),
+    "7d": t("fin_period_7d"),
+    "30d": t("fin_period_30d"),
+    month: t("fin_period_month"),
+    last_month: t("fin_period_last"),
+    custom: t("fin_period_custom"),
+  };
+
   return (
     <div className="space-y-5 p-4 md:p-8">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -112,6 +153,37 @@ function FinanceiroPage() {
         </Dialog>
       </div>
 
+      {/* Period filter */}
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap gap-2">
+          {(Object.keys(periodLabels) as Period[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => { setPeriod(p); setPage(0); }}
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition ${
+                period === p
+                  ? "border-gold/50 bg-gold/15 text-gold"
+                  : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+              }`}
+            >
+              {periodLabels[p]}
+            </button>
+          ))}
+        </div>
+        {period === "custom" && (
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">{t("fin_custom_from")}</Label>
+              <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-8 w-36 text-sm" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">{t("fin_custom_to")}</Label>
+              <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-8 w-36 text-sm" />
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Métricas */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <MetricCard icon={TrendingUp} label={t("fin_revenue")} value={brl(monthly.income)} accent="success" />
@@ -130,27 +202,11 @@ function FinanceiroPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} style={{ background: "transparent" }} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.30 0 0)" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }}
-                  axisLine={{ stroke: "oklch(0.28 0 0)" }}
-                  tickLine={false}
-                />
-                <YAxis
-                  tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={36}
-                />
+                <XAxis dataKey="name" tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={{ stroke: "oklch(0.28 0 0)" }} tickLine={false} />
+                <YAxis tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
                 <Tooltip
                   cursor={{ fill: "oklch(0.78 0.14 75 / 0.06)" }}
-                  contentStyle={{
-                    background: "oklch(0.14 0 0)",
-                    border: "1px solid oklch(0.26 0 0)",
-                    borderRadius: 10,
-                    fontSize: 12,
-                    color: "oklch(0.92 0 0)",
-                  }}
+                  contentStyle={{ background: "oklch(0.14 0 0)", border: "1px solid oklch(0.26 0 0)", borderRadius: 10, fontSize: 12, color: "oklch(0.92 0 0)" }}
                   labelStyle={{ color: "oklch(0.78 0.14 75)", fontWeight: 600, marginBottom: 4 }}
                   formatter={(v: number) => [brl(v)]}
                 />
@@ -275,7 +331,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
     const a = Number(amount);
     if (!barbershop || !a || a <= 0) return toast.error("Valor inválido");
     setSaving(true);
-    const { error } = await localData.from("financial_entries").insert({
+    const { error } = await supabase.from("financial_entries").insert({
       barbershop_id: barbershop.id,
       type, category: category || null, description: description || null,
       amount: a, date, payment_method: paymentMethod as any,

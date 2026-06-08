@@ -2,24 +2,27 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/hooks/useLanguage";
-import { getLocalAuthEmail } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 import {
   ArrowRight,
   Calendar,
-  DollarSign,
+  LayoutDashboard,
+  TrendingUp,
   Package,
   Users,
-  Scissors,
+  Smartphone,
   Sparkles,
   Check,
   ChevronDown,
   Mail,
 } from "lucide-react";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/shared/ThemeToggle";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
-    if (getLocalAuthEmail()) throw redirect({ to: "/app" });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) throw redirect({ to: "/app" });
   },
   component: Landing,
 });
@@ -50,21 +53,40 @@ function LangToggle() {
 
 function Feature({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
   return (
-    <div className="group flex flex-col gap-5 rounded-2xl border border-white/6 bg-white/[0.025] p-6 transition-all duration-200 hover:border-gold/35 hover:bg-white/5">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gold/12 text-gold ring-1 ring-inset ring-gold/20 transition-all duration-200 group-hover:bg-gold/20 group-hover:ring-gold/35">
-        <Icon className="h-5 w-5" />
+    <div
+      className="group flex flex-col transition-all duration-300"
+      style={{
+        background: "var(--color-card)",
+        border: "1px solid var(--color-border)",
+        borderRadius: 16,
+        padding: 28,
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-gold)";
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border)";
+        (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
+      }}
+    >
+      <div
+        className="mb-5 flex items-center justify-center shrink-0"
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 12,
+          background: "var(--color-accent)",
+        }}
+      >
+        <Icon style={{ width: 26, height: 26, color: "var(--color-gold)" }} />
       </div>
-      <div className="space-y-2">
-        <div
-          className="text-[13px] font-semibold uppercase tracking-[0.11em]"
-          style={{ color: "oklch(0.82 0.12 78)", fontFamily: "Inter, DM Sans, system-ui, sans-serif" }}
-        >
-          {title}
-        </div>
-        <p className="text-sm leading-relaxed" style={{ color: "oklch(0.62 0 0)" }}>
-          {desc}
-        </p>
+      <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-foreground)", marginBottom: 8, lineHeight: 1.3 }}>
+        {title}
       </div>
+      <p style={{ fontSize: 14, color: "var(--color-muted-foreground)", lineHeight: 1.6, fontWeight: 400 }}>
+        {desc}
+      </p>
     </div>
   );
 }
@@ -95,12 +117,36 @@ function Landing() {
   const { t } = useLanguage();
 
   const features = [
-    { icon: Calendar, title: t("landing_feat_schedule_title"), desc: t("landing_feat_schedule_desc") },
-    { icon: Scissors, title: t("landing_feat_panel_title"), desc: t("landing_feat_panel_desc") },
-    { icon: DollarSign, title: t("landing_feat_financial_title"), desc: t("landing_feat_financial_desc") },
-    { icon: Package, title: t("landing_feat_stock_title"), desc: t("landing_feat_stock_desc") },
-    { icon: Users, title: t("landing_feat_clients_title"), desc: t("landing_feat_clients_desc") },
-    { icon: Sparkles, title: t("landing_feat_mobile_title"), desc: t("landing_feat_mobile_desc") },
+    {
+      icon: Calendar,
+      title: "Agendamento Online",
+      desc: "Seus clientes agendam sozinhos pelo celular, 24 horas por dia. Sem ligações, sem confusão, sem horário perdido.",
+    },
+    {
+      icon: LayoutDashboard,
+      title: "Painel do Barbeiro",
+      desc: "Veja todos os agendamentos do dia, confirme com um clique e gerencie sua agenda em tempo real.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Financeiro Real",
+      desc: "Receitas, despesas e lucro calculados automaticamente. Saiba exatamente quanto entra e sai todo dia.",
+    },
+    {
+      icon: Package,
+      title: "Estoque Inteligente",
+      desc: "Alerta automático quando o produto está acabando. Nunca mais fique sem pomada no momento errado.",
+    },
+    {
+      icon: Users,
+      title: "Clientes Ativos",
+      desc: "Histórico completo de cada cliente. Lembre quem não aparece há 30 dias e traga de volta com um clique.",
+    },
+    {
+      icon: Smartphone,
+      title: "Mobile First",
+      desc: "Feito para usar no celular durante o atendimento. Rápido, intuitivo e sem fricção nenhuma.",
+    },
   ];
 
   const benefits = [
@@ -133,6 +179,7 @@ function Landing() {
           </Link>
           <nav className="flex items-center gap-2">
             <LangToggle />
+            <ThemeToggle size="sm" />
             <Link to="/auth/login">
               <Button variant="ghost" size="sm">{t("landing_header_signin")}</Button>
             </Link>
@@ -183,15 +230,15 @@ function Landing() {
       </section>
 
       {/* ── Features */}
-      <section className="border-t border-border py-24">
+      <section className="border-t border-border py-20">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="mb-14 text-center">
-            <h2 className="font-display text-3xl tracking-wide md:text-5xl">
-              {t("landing_features_title").split(" ").map((w, i, arr) =>
-                i === arr.length - 1 ? <span key={i} className="text-gold"> {w}</span> : <span key={i}>{w} </span>
-              )}
+          <div className="mb-12 text-center">
+            <h2 style={{ fontSize: 32, fontWeight: 700, color: "var(--color-foreground)", lineHeight: 1.2 }}>
+              Tudo que sua barbearia precisa
             </h2>
-            <p className="mt-3 text-base text-muted-foreground">{t("landing_features_sub")}</p>
+            <p className="mt-3" style={{ fontSize: 16, color: "var(--color-muted-foreground)" }}>
+              Cada detalhe pensado para o seu dia a dia.
+            </p>
           </div>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
@@ -283,9 +330,12 @@ function Landing() {
                 <Mail className="h-3.5 w-3.5" />
                 {t("landing_footer_email")}
               </a>
-              <span className="hover:text-foreground cursor-pointer transition">{t("landing_footer_support")}</span>
-              <span className="hover:text-foreground cursor-pointer transition">{t("landing_footer_privacy")}</span>
-              <span className="hover:text-foreground cursor-pointer transition">{t("landing_footer_terms")}</span>
+              <Link to="/termos" className="transition hover:text-gold">
+                {t("landing_footer_terms")}
+              </Link>
+              <Link to="/privacidade" className="transition hover:text-gold">
+                {t("landing_footer_privacy")}
+              </Link>
             </nav>
 
             <p className="text-center text-xs text-muted-foreground">

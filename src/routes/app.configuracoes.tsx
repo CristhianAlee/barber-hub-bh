@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +16,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
+import { AlertTriangle, Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
 import { brl, formatPhone } from "@/lib/format";
+import { storageService } from "@/services/storageService";
 
 export const Route = createFileRoute("/app/configuracoes")({
   component: Configuracoes,
@@ -66,7 +67,7 @@ function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) 
 function Configuracoes() {
   const { barbershop, refreshBarbershop } = useAuth();
   const { t } = useLanguage();
-  const [tab, setTab] = useState<"barbearia" | "horarios" | "profissionais" | "servicos">("barbearia");
+  const [tab, setTab] = useState<"barbearia" | "horarios" | "profissionais" | "servicos" | "conta">("barbearia");
 
   if (!barbershop) return null;
 
@@ -102,12 +103,13 @@ function Configuracoes() {
       </Card>
 
       <div className="flex flex-wrap gap-2 border-b border-border">
-        {(["barbearia", "horarios", "profissionais", "servicos"] as const).map((tabKey) => {
+        {(["barbearia", "horarios", "profissionais", "servicos", "conta"] as const).map((tabKey) => {
           const labels: Record<typeof tabKey, string> = {
             barbearia: t("settings_tab_barbershop"),
             horarios: t("settings_tab_hours"),
             profissionais: t("settings_tab_professionals"),
             servicos: t("settings_tab_services"),
+            conta: "Minha Conta",
           };
           return (
             <button
@@ -129,6 +131,7 @@ function Configuracoes() {
       {tab === "horarios" && <BusinessHours />}
       {tab === "profissionais" && <ProfessionalsTab />}
       {tab === "servicos" && <ServicesTab />}
+      {tab === "conta" && <ContaTab />}
     </div>
   );
 }
@@ -145,21 +148,32 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
 
   /* Logo upload */
   const [logoPreview, setLogoPreview] = useState<string | null>(barbershop?.logo_url ?? null);
+  const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) return toast.error("Logo deve ter menos de 2 MB");
-    const url = URL.createObjectURL(file);
-    setLogoPreview(url);
+    setPendingLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
     toast.success("Logo carregada! Salve para confirmar.");
   };
 
   const save = async () => {
     if (!barbershop) return;
     setSaving(true);
-    const { error } = await localData
+
+    if (pendingLogoFile) {
+      const { error: logoErr } = await storageService.uploadLogo(barbershop.id, pendingLogoFile);
+      if (logoErr) {
+        setSaving(false);
+        return toast.error(`Erro ao enviar logo: ${logoErr}`);
+      }
+      setPendingLogoFile(null);
+    }
+
+    const { error } = await supabase
       .from("barbershops")
       .update({
         name,
@@ -167,7 +181,6 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
         address,
         booking_interval_minutes: Number(interval),
         max_advance_days: Number(maxAdvance),
-        ...(logoPreview && logoPreview !== barbershop.logo_url ? { logo_url: logoPreview } : {}),
       })
       .eq("id", barbershop.id);
     setSaving(false);
@@ -255,7 +268,7 @@ function BusinessHours() {
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const { data } = await localData
+      const { data } = await supabase
         .from("business_hours")
         .select("*")
         .eq("barbershop_id", barbershop.id)
@@ -272,7 +285,7 @@ function BusinessHours() {
   };
 
   const save = async () => {
-    const { error } = await localData
+    const { error } = await supabase
       .from("business_hours")
       .upsert(hours.map((h) => ({ ...h })), { onConflict: "barbershop_id,day_of_week" });
     if (error) return toast.error("Erro ao salvar");
@@ -324,7 +337,7 @@ function ProfessionalsTab() {
 
   const load = async () => {
     if (!barbershop) return;
-    const { data } = await localData.from("professionals").select("*").eq("barbershop_id", barbershop.id).order("created_at");
+    const { data } = await supabase.from("professionals").select("*").eq("barbershop_id", barbershop.id).order("created_at");
     setList(data ?? []);
   };
   useEffect(() => { load(); }, [barbershop]); // eslint-disable-line
@@ -332,15 +345,15 @@ function ProfessionalsTab() {
   const add = async () => {
     if (!name.trim() || !barbershop) return toast.error("Informe o nome");
     if (phone.replace(/\D/g, "").length < 10) return toast.error("Telefone obrigatório");
-    const { data: created, error } = await localData
+    const { data: created, error } = await supabase
       .from("professionals")
       .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") })
       .select("id")
       .single();
     if (error || !created) return toast.error(error?.message ?? "Erro ao adicionar");
-    const { data: activeServices } = await localData.from("services").select("id").eq("barbershop_id", barbershop.id).eq("active", true);
+    const { data: activeServices } = await supabase.from("services").select("id").eq("barbershop_id", barbershop.id).eq("active", true);
     if (activeServices && activeServices.length > 0) {
-      await localData.from("professional_services").insert(
+      await supabase.from("professional_services").insert(
         activeServices.map((s: any) => ({ barbershop_id: barbershop.id, professional_id: created.id, service_id: s.id }))
       );
     }
@@ -350,12 +363,12 @@ function ProfessionalsTab() {
   };
 
   const toggle = async (id: string, active: boolean) => {
-    await localData.from("professionals").update({ active }).eq("id", id);
+    await supabase.from("professionals").update({ active }).eq("id", id);
     load();
   };
   const remove = async (id: string) => {
     if (!confirm("Remover profissional?")) return;
-    await localData.from("professionals").delete().eq("id", id);
+    await supabase.from("professionals").delete().eq("id", id);
     load();
   };
 
@@ -410,10 +423,10 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
     (async () => {
       setLoading(true);
       const [pHoursRes, bHoursRes, servicesRes, linksRes] = await Promise.all([
-        localData.from("professional_business_hours").select("*").eq("professional_id", professional.id),
-        localData.from("business_hours").select("*").eq("barbershop_id", barbershop.id).order("day_of_week"),
-        localData.from("services").select("id, name, price, active").eq("barbershop_id", barbershop.id).eq("active", true).order("name"),
-        localData.from("professional_services").select("service_id").eq("professional_id", professional.id),
+        supabase.from("professional_business_hours").select("*").eq("professional_id", professional.id),
+        supabase.from("business_hours").select("*").eq("barbershop_id", barbershop.id).order("day_of_week"),
+        supabase.from("services").select("id, name, price, active").eq("barbershop_id", barbershop.id).eq("active", true).order("name"),
+        supabase.from("professional_services").select("service_id").eq("professional_id", professional.id),
       ]);
       const pHours = pHoursRes.data ?? [];
       const bHours = bHoursRes.data ?? [];
@@ -442,8 +455,8 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
   };
   const resetDay = async (dow: number) => {
     if (!barbershop) return;
-    await localData.from("professional_business_hours").delete().eq("professional_id", professional.id).eq("day_of_week", dow);
-    const { data: bh } = await localData.from("business_hours").select("*").eq("barbershop_id", barbershop.id).eq("day_of_week", dow).maybeSingle();
+    await supabase.from("professional_business_hours").delete().eq("professional_id", professional.id).eq("day_of_week", dow);
+    const { data: bh } = await supabase.from("business_hours").select("*").eq("barbershop_id", barbershop.id).eq("day_of_week", dow).maybeSingle();
     const c = [...hours];
     c[dow] = {
       day_of_week: dow,
@@ -475,18 +488,18 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
         is_closed: h.is_closed,
       }));
       if (customRows.length > 0) {
-        await localData.from("professional_business_hours").delete().eq("professional_id", professional.id);
-        const { error: hErr } = await localData.from("professional_business_hours").insert(customRows);
+        await supabase.from("professional_business_hours").delete().eq("professional_id", professional.id);
+        const { error: hErr } = await supabase.from("professional_business_hours").insert(customRows);
         if (hErr) throw hErr;
       }
-      await localData.from("professional_services").delete().eq("professional_id", professional.id);
+      await supabase.from("professional_services").delete().eq("professional_id", professional.id);
       const links = Array.from(linkedServiceIds).map((sid) => ({
         barbershop_id: barbershop.id,
         professional_id: professional.id,
         service_id: sid,
       }));
       if (links.length > 0) {
-        const { error: sErr } = await localData.from("professional_services").insert(links);
+        const { error: sErr } = await supabase.from("professional_services").insert(links);
         if (sErr) throw sErr;
       }
       toast.success("Configurações salvas");
@@ -575,6 +588,105 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
   );
 }
 
+function ContaTab() {
+  const { user, barbershop } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const handleDeletion = async () => {
+    if (confirm !== "EXCLUIR") return;
+    setSending(true);
+    // Open mailto as fallback — backend deletion processed manually
+    const subject = encodeURIComponent("Solicitação de exclusão de conta — BarberHub");
+    const body = encodeURIComponent(
+      `Olá,\n\nSolicito a exclusão permanente da minha conta no BarberHub.\n\n` +
+      `E-mail: ${user?.email ?? ""}\n` +
+      `Barbearia: ${barbershop?.name ?? ""}\n` +
+      `ID: ${user?.id ?? ""}\n\n` +
+      `Confirmo que esta ação é irreversível e que todos os dados serão removidos em até 90 dias.`
+    );
+    window.open(`mailto:privacidade@barberhub.com.br?subject=${subject}&body=${body}`, "_blank");
+    setSending(false);
+    setOpen(false);
+    setConfirm("");
+    toast.success("Solicitação enviada. Você receberá uma confirmação em até 2 dias úteis.");
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="border-border bg-card p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+            <Settings className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="font-semibold">{user?.email}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Barbearia: {barbershop?.name ?? "—"}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="border-destructive/30 bg-card p-5">
+        <h3 className="mb-1 font-semibold text-destructive">Zona de perigo</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Ao excluir sua conta, todos os seus dados e dados de clientes serão permanentemente
+          removidos em até 90 dias. Esta ação não pode ser desfeita.
+        </p>
+        <Button
+          variant="outline"
+          className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          onClick={() => setOpen(true)}
+        >
+          <AlertTriangle className="mr-2 h-4 w-4" />
+          Solicitar exclusão da conta
+        </Button>
+      </Card>
+
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setConfirm(""); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Excluir conta
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Ao excluir sua conta, todos os seus dados e dados de clientes serão permanentemente
+            removidos em até 90 dias. Esta ação não pode ser desfeita.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="del-confirm" className="text-sm">
+              Digite <strong className="text-foreground">EXCLUIR</strong> para confirmar:
+            </Label>
+            <Input
+              id="del-confirm"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder="EXCLUIR"
+              className="font-mono"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setOpen(false); setConfirm(""); }}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={confirm !== "EXCLUIR" || sending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeletion}
+            >
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar exclusão"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function ServicesTab() {
   const { barbershop } = useAuth();
   const { t } = useLanguage();
@@ -583,14 +695,14 @@ function ServicesTab() {
 
   const load = async () => {
     if (!barbershop) return;
-    const { data } = await localData.from("services").select("*").eq("barbershop_id", barbershop.id).order("created_at");
+    const { data } = await supabase.from("services").select("*").eq("barbershop_id", barbershop.id).order("created_at");
     setList(data ?? []);
   };
   useEffect(() => { load(); }, [barbershop]); // eslint-disable-line
 
   const add = async () => {
     if (!form.name.trim() || !barbershop) return;
-    const { error } = await localData.from("services").insert({
+    const { error } = await supabase.from("services").insert({
       barbershop_id: barbershop.id,
       name: form.name,
       duration_minutes: form.duration,
@@ -602,11 +714,11 @@ function ServicesTab() {
   };
   const remove = async (id: string) => {
     if (!confirm("Remover serviço?")) return;
-    await localData.from("services").delete().eq("id", id);
+    await supabase.from("services").delete().eq("id", id);
     load();
   };
   const toggle = async (id: string, active: boolean) => {
-    await localData.from("services").update({ active }).eq("id", id);
+    await supabase.from("services").update({ active }).eq("id", id);
     load();
   };
 

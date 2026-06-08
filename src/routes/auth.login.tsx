@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signInLocal } from "@/lib/auth-context";
+import { authService } from "@/services/authService";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock } from "lucide-react";
@@ -22,8 +22,12 @@ function Login() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    signInLocal(email);
+    const { error } = await authService.signIn(email, password);
     setLoading(false);
+    if (error) {
+      toast.error(error.includes("Invalid") ? "E-mail ou senha incorretos" : error);
+      return;
+    }
     toast.success("Bem-vindo de volta!");
     navigate({ to: "/app" });
   };

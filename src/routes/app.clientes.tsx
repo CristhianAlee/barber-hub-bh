@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,8 +56,8 @@ function ClientesPage() {
     const since = new Date(Date.now() - DAYS_INACTIVE * 86400000).toISOString().slice(0, 10);
     const today = new Date().toISOString().slice(0, 10);
     const [c, recent] = await Promise.all([
-      localData.from("clients").select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at").eq("barbershop_id", barbershop.id).order("name"),
-      localData.from("appointments").select("client_id, date, status").eq("barbershop_id", barbershop.id).in("status", ["pending", "confirmed", "completed"]).gte("date", since),
+      supabase.from("clients").select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at").eq("barbershop_id", barbershop.id).order("name"),
+      supabase.from("appointments").select("client_id, date, status").eq("barbershop_id", barbershop.id).in("status", ["pending", "confirmed", "completed"]).gte("date", since),
     ]);
     setClients((c.data as Client[]) ?? []);
     const set = new Set<string>();
@@ -238,8 +238,8 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
     (async () => {
       setLoading(true);
       const [appts, salesItems] = await Promise.all([
-        localData.from("appointments").select("id, date, time, status, services(name, price), professionals(name)").eq("client_id", client.id).order("date", { ascending: false }).limit(50),
-        localData.from("sales").select("id, created_at, total_amount, sale_items(name, quantity, type, unit_price)").eq("client_id", client.id).order("created_at", { ascending: false }).limit(50),
+        supabase.from("appointments").select("id, date, time, status, services(name, price), professionals(name)").eq("client_id", client.id).order("date", { ascending: false }).limit(50),
+        supabase.from("sales").select("id, created_at, total_amount, sale_items(name, quantity, type, unit_price)").eq("client_id", client.id).order("created_at", { ascending: false }).limit(50),
       ]);
       setHistory(appts.data ?? []);
       const items: any[] = [];
@@ -253,7 +253,7 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
 
   const saveNotes = async () => {
     setSaving(true);
-    const { error } = await localData.from("clients").update({ notes }).eq("id", client.id);
+    const { error } = await supabase.from("clients").update({ notes }).eq("id", client.id);
     setSaving(false);
     if (error) return toast.error("Erro ao salvar");
     toast.success("Observações salvas");

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { localData } from "@/lib/local-data";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +37,7 @@ function Onboarding() {
   const finish = async () => {
     if (!barbershop) return;
     setLoading(true);
-    await localData.from("barbershops").update({ onboarded: true }).eq("id", barbershop.id);
+    await supabase.from("barbershops").update({ onboarded: true }).eq("id", barbershop.id);
     await refreshBarbershop();
     toast.success("Tudo pronto!");
     navigate({ to: "/app" });
@@ -46,7 +46,7 @@ function Onboarding() {
   const saveStep1 = async () => {
     if (!barbershop) return;
     setLoading(true);
-    const { error } = await localData
+    const { error } = await supabase
       .from("barbershops")
       .update({ name: bsName, address })
       .eq("id", barbershop.id);
@@ -60,7 +60,7 @@ function Onboarding() {
     if (!barbershop) return;
     if (!skip && profName.trim()) {
       setLoading(true);
-      const { error } = await localData.from("professionals").insert({
+      const { error } = await supabase.from("professionals").insert({
         barbershop_id: barbershop.id,
         name: profName.trim(),
       });
@@ -76,7 +76,7 @@ function Onboarding() {
       setLoading(true);
       const valid = services.filter((s) => s.name.trim() && s.price > 0);
       if (valid.length) {
-        const { error } = await localData.from("services").insert(
+        const { error } = await supabase.from("services").insert(
           valid.map((s) => ({
             barbershop_id: barbershop.id,
             name: s.name,

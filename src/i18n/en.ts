@@ -316,6 +316,29 @@ export const en: Record<TranslationKey, string> = {
   book_no_services: "No services available.",
   book_no_professionals: "No professional performs this service at the moment.",
 
+  // ── Theme
+  theme_toggle_dark: "Dark theme",
+  theme_toggle_light: "Light theme",
+
+  // ── Dashboard — chart and alerts
+  dash_chart_title: "Revenue — last 7 days",
+  dash_chart_this_week: "This week",
+  dash_chart_prev_week: "Previous week",
+  dash_alert_stock_title: "Critical stock",
+  dash_alert_stock_body: "product(s) below minimum",
+  dash_alert_inactive_title: "Inactive clients",
+  dash_alert_inactive_body: "client(s) without visit for 30+ days",
+
+  // ── Financial — period filters
+  fin_period_today: "Today",
+  fin_period_7d: "7 days",
+  fin_period_30d: "30 days",
+  fin_period_month: "This month",
+  fin_period_last: "Last month",
+  fin_period_custom: "Custom",
+  fin_custom_from: "From",
+  fin_custom_to: "To",
+
   // ── Checkout
   checkout_client: "Client",
   checkout_base_service: "Booked service",

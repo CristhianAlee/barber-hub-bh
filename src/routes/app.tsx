@@ -1,17 +1,20 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
-import { getLocalAuthEmail, useAuth } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/hooks/useLanguage";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Loader2 } from "lucide-react";
+import { Menu, Loader2, Moon, Sun } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { useTheme } from "@/hooks/useTheme";
 
 export const Route = createFileRoute("/app")({
   beforeLoad: async ({ location }) => {
     if (typeof window === "undefined") return;
-    if (!getLocalAuthEmail()) {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
       throw redirect({ to: "/auth/login", search: { redirect: location.href } as any });
     }
   },
@@ -39,6 +42,18 @@ function LangToggle() {
         EN
       </button>
     </div>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggleTheme } = useTheme();
+  return (
+    <button
+      onClick={toggleTheme}
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground transition hover:text-gold"
+    >
+      {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+    </button>
   );
 }
 
@@ -79,6 +94,7 @@ function AppLayout() {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <LangToggle />
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
