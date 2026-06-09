@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AlertTriangle, Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
-import { brl, formatPhone } from "@/lib/format";
+import { brl, copyToClipboard, formatPhone } from "@/lib/format";
 import { storageService } from "@/services/storageService";
 
 export const Route = createFileRoute("/app/configuracoes")({
@@ -93,7 +93,7 @@ function Configuracoes() {
             size="sm"
             className="bg-gradient-gold text-gold-foreground hover:opacity-90"
             onClick={() => {
-              navigator.clipboard.writeText(publicUrl);
+              copyToClipboard(publicUrl);
               toast.success(t("settings_link_copied"));
             }}
           >

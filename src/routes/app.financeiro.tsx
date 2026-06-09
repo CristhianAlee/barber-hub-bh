@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { brl, formatDateBR } from "@/lib/format";
-import { Plus, TrendingUp, TrendingDown, DollarSign, Receipt, Loader2 } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Receipt, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 
 export const Route = createFileRoute("/app/financeiro")({
   component: FinanceiroPage,
@@ -119,6 +121,18 @@ function FinanceiroPage() {
     return weeks.map((w, i) => ({ name: `${t("fin_week")} ${i + 1}`, Receita: w.income, Despesa: w.expense }));
   }, [entries, t]);
 
+  const byMethod = useMemo(() => {
+    const map: Record<string, number> = {};
+    entries.filter((e) => e.type === "income").forEach((e) => {
+      const m = e.payment_method ?? "outros";
+      map[m] = (map[m] ?? 0) + Number(e.amount);
+    });
+    return map;
+  }, [entries]);
+
+  const methodLabel = (m: string) =>
+    ({ cash: "Dinheiro", pix: "PIX", debit: "Débito", credit: "Crédito", transfer: "Transferência" }[m] ?? m);
+
   const filtered = entries.filter((e) => filterType === "all" || e.type === filterType);
   const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
@@ -152,6 +166,16 @@ function FinanceiroPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Tabs defaultValue="lancamentos">
+        <TabsList>
+          <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
+          <TabsTrigger value="custos">Custos Fixos</TabsTrigger>
+        </TabsList>
+        <TabsContent value="custos">
+          <CustosFixosTab />
+        </TabsContent>
+        <TabsContent value="lancamentos" className="space-y-5">
 
       {/* Period filter */}
       <div className="flex flex-col gap-2">
@@ -191,6 +215,24 @@ function FinanceiroPage() {
         <MetricCard icon={DollarSign} label={t("fin_profit")} value={brl(monthly.profit)} accent="gold" />
         <MetricCard icon={Receipt} label={t("fin_avg_ticket")} value={brl(monthly.ticket)} />
       </div>
+
+      {/* Breakdown por forma de pagamento */}
+      {Object.keys(byMethod).length > 0 && (
+        <Card className="border-border bg-card p-4">
+          <div className="mb-3 text-xs uppercase tracking-wider text-muted-foreground">Receitas por forma de pagamento</div>
+          <div className="flex flex-wrap gap-3">
+            {Object.entries(byMethod).sort((a, b) => b[1] - a[1]).map(([method, amount]) => (
+              <div key={method} className="min-w-[110px] rounded-lg border border-border bg-background/40 px-3 py-2">
+                <div className="text-xs text-muted-foreground">{methodLabel(method)}</div>
+                <div className="mt-0.5 font-mono font-bold text-success">{brl(amount)}</div>
+                <div className="mt-0.5 text-[10px] text-muted-foreground">
+                  {monthly.income > 0 ? `${((amount / monthly.income) * 100).toFixed(0)}%` : "—"}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Gráfico */}
       <Card className="border-border bg-card p-5">
@@ -287,6 +329,100 @@ function FinanceiroPage() {
           </>
         )}
       </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function CustosFixosTab() {
+  const { barbershop } = useAuth();
+  const [list, setList] = useState<any[]>([]);
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [dueDay, setDueDay] = useState("1");
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    if (!barbershop) return;
+    const { data } = await supabase.from("fixed_costs")
+      .select("*").eq("barbershop_id", barbershop.id).order("created_at");
+    setList(data ?? []);
+  };
+  useEffect(() => { load(); }, [barbershop]); // eslint-disable-line
+
+  const add = async () => {
+    if (!barbershop) return;
+    const a = Number(amount);
+    if (!name.trim() || !a || a <= 0) return toast.error("Preencha nome e valor");
+    setSaving(true);
+    const { error } = await supabase.from("fixed_costs").insert({
+      barbershop_id: barbershop.id, name, amount: a, due_day: Number(dueDay),
+    });
+    setSaving(false);
+    if (error) return toast.error(error.message);
+    setName(""); setAmount(""); setDueDay("1");
+    load();
+  };
+
+  const toggle = async (id: string, active: boolean) => {
+    await supabase.from("fixed_costs").update({ active }).eq("id", id);
+    load();
+  };
+  const remove = async (id: string) => {
+    if (!confirm("Remover custo fixo?")) return;
+    await supabase.from("fixed_costs").delete().eq("id", id);
+    load();
+  };
+
+  const total = list.filter((c) => c.active).reduce((s: number, c: any) => s + Number(c.amount), 0);
+
+  return (
+    <div className="space-y-4 pt-2">
+      <Card className="border-border bg-card p-4">
+        <div className="grid grid-cols-12 gap-2">
+          <Input className="col-span-5" placeholder="Nome (ex: Aluguel)" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="col-span-3" type="number" step="0.01" placeholder="R$" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <Select value={dueDay} onValueChange={setDueDay}>
+            <SelectTrigger className="col-span-2"><SelectValue placeholder="Dia" /></SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 28 }, (_, i) => (
+                <SelectItem key={i + 1} value={String(i + 1)}>Dia {i + 1}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button className="col-span-2 bg-gradient-gold text-gold-foreground hover:opacity-90" onClick={add} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </Button>
+        </div>
+      </Card>
+
+      {list.length > 0 && (
+        <Card className="border-border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">Custos ativos</span>
+            <span className="font-mono text-sm font-bold text-destructive">{brl(total)}/mês</span>
+          </div>
+          <div className="space-y-2">
+            {list.map((c) => (
+              <div key={c.id} className={`flex items-center gap-3 rounded-lg border p-3 ${c.active ? "border-border" : "border-border opacity-50"}`}>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{c.name}</div>
+                  <div className="text-xs text-muted-foreground">Vence dia {c.due_day}</div>
+                </div>
+                <div className="font-mono text-sm font-bold text-destructive">{brl(Number(c.amount))}</div>
+                <Switch checked={c.active} onCheckedChange={(v) => toggle(c.id, v)} />
+                <Button variant="ghost" size="icon" onClick={() => remove(c.id)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+      {list.length === 0 && (
+        <p className="py-12 text-center text-sm text-muted-foreground">Nenhum custo fixo cadastrado</p>
+      )}
     </div>
   );
 }

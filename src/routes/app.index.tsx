@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/lib/supabase";
-import { brl } from "@/lib/format";
+import { brl, copyToClipboard } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +134,7 @@ function Dashboard() {
             size="sm"
             className="flex-1 md:flex-none"
             onClick={() => {
-              navigator.clipboard.writeText(publicUrl);
+              copyToClipboard(publicUrl);
               toast.success(t("dash_link_copied"));
             }}
           >
@@ -291,7 +291,7 @@ function Dashboard() {
             size="sm"
             className="mt-3 w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
             onClick={() => {
-              navigator.clipboard.writeText(publicUrl);
+              copyToClipboard(publicUrl);
               toast.success(t("dash_copied"));
             }}
           >

@@ -218,9 +218,10 @@ function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
   );
 }
 
-function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () => void }) {
+function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; onCreated: () => void }) {
   const { barbershop } = useAuth();
   const { t } = useLanguage();
+  const [date, setDate] = useState<Date>(initialDate);
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
   const [hours, setHours] = useState<any[]>([]);
@@ -375,6 +376,15 @@ function NewAppointmentDialog({ date, onCreated }: { date: Date; onCreated: () =
         <DialogTitle className="font-display text-2xl tracking-wide">{t("appt_new_title")}</DialogTitle>
       </DialogHeader>
       <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label>{t("date")}</Label>
+          <Input
+            type="date"
+            value={fmtDate(date)}
+            min={fmtDate(new Date())}
+            onChange={(e) => { if (e.target.value) { setDate(new Date(e.target.value + "T00:00:00")); setTime(""); } }}
+          />
+        </div>
         <div className="space-y-1.5">
           <Label>{t("appt_client_phone")}</Label>
           <Input
