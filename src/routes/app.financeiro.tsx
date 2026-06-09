@@ -328,8 +328,9 @@ function EntryForm({ onDone }: { onDone: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
+    if (!barbershop) return toast.error("Barbearia não encontrada. Recarregue a página.");
     const a = Number(amount);
-    if (!barbershop || !a || a <= 0) return toast.error("Valor inválido");
+    if (!a || a <= 0) return toast.error("Valor inválido");
     setSaving(true);
     const { error } = await supabase.from("financial_entries").insert({
       barbershop_id: barbershop.id,

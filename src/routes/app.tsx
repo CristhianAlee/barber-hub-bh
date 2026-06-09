@@ -64,7 +64,8 @@ function AppLayout() {
   const path = typeof window !== "undefined" ? window.location.pathname : "";
 
   useEffect(() => {
-    if (!loading && barbershop && !barbershop.onboarded && !path.includes("/onboarding")) {
+    if (loading || path.includes("/onboarding")) return;
+    if (!barbershop || !barbershop.onboarded) {
       navigate({ to: "/app/onboarding" });
     }
   }, [loading, barbershop, path, navigate]);

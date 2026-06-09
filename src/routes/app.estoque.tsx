@@ -238,7 +238,8 @@ function ProductForm({ onDone }: { onDone: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    if (!barbershop || !name.trim()) return toast.error("Nome obrigatório");
+    if (!barbershop) return toast.error("Barbearia não encontrada. Recarregue a página.");
+    if (!name.trim()) return toast.error("Nome obrigatório");
     setSaving(true);
     const { error } = await supabase.from("products").insert({
       barbershop_id: barbershop.id,

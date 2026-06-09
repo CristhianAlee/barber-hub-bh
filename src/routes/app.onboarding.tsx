@@ -14,8 +14,17 @@ export const Route = createFileRoute("/app/onboarding")({
   component: Onboarding,
 });
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
 function Onboarding() {
-  const { barbershop, refreshBarbershop } = useAuth();
+  const { barbershop, refreshBarbershop, user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -44,14 +53,33 @@ function Onboarding() {
   };
 
   const saveStep1 = async () => {
-    if (!barbershop) return;
+    if (!user) return;
+    if (!bsName.trim()) return toast.error("Informe o nome da barbearia");
     setLoading(true);
-    const { error } = await supabase
-      .from("barbershops")
-      .update({ name: bsName, address })
-      .eq("id", barbershop.id);
-    setLoading(false);
-    if (error) return toast.error("Erro ao salvar");
+
+    if (!barbershop) {
+      const base = slugify(bsName) || "barbearia";
+      const slug = `${base}-${user.id.slice(0, 6)}`;
+      const { error } = await supabase.from("barbershops").insert({
+        owner_id: user.id,
+        name: bsName,
+        address: address || null,
+        slug,
+        onboarded: false,
+        booking_interval_minutes: 30,
+        max_advance_days: 30,
+      });
+      setLoading(false);
+      if (error) return toast.error("Erro ao criar barbearia: " + error.message);
+    } else {
+      const { error } = await supabase
+        .from("barbershops")
+        .update({ name: bsName, address: address || null })
+        .eq("id", barbershop.id);
+      setLoading(false);
+      if (error) return toast.error("Erro ao salvar");
+    }
+
     await refreshBarbershop();
     setStep(2);
   };
@@ -135,9 +163,13 @@ function Onboarding() {
                 />
               </div>
               <div className="flex justify-between pt-2">
-                <Button variant="ghost" onClick={() => setStep(2)}>
-                  Pular por agora
-                </Button>
+                {barbershop ? (
+                  <Button variant="ghost" onClick={() => setStep(2)}>
+                    Pular por agora
+                  </Button>
+                ) : (
+                  <div />
+                )}
                 <Button
                   onClick={saveStep1}
                   disabled={loading || !bsName.trim()}
