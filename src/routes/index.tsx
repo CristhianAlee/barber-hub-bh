@@ -51,42 +51,99 @@ function LangToggle() {
   );
 }
 
-function Feature({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
+function Feature({ icon: Icon, title, desc, num }: { icon: any; title: string; desc: string; num: number }) {
+  const [hovered, setHovered] = useState(false);
   return (
     <div
-      className="group flex flex-col transition-all duration-300"
       style={{
-        background: "var(--color-card)",
-        border: "1px solid var(--color-border)",
-        borderRadius: 16,
-        padding: 28,
+        padding: 1,
+        borderRadius: 20,
+        transition: "background 0.35s ease",
+        background: hovered
+          ? "linear-gradient(135deg, oklch(0.78 0.14 75 / 0.65), oklch(0.78 0.14 75 / 0.12) 50%, oklch(0.78 0.14 75 / 0.45))"
+          : "linear-gradient(135deg, oklch(0.78 0.14 75 / 0.16), transparent 50%, oklch(0.78 0.14 75 / 0.07))",
       }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-gold)";
-        (e.currentTarget as HTMLDivElement).style.transform = "translateY(-4px)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-border)";
-        (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div
-        className="mb-5 flex items-center justify-center shrink-0"
         style={{
-          width: 52,
-          height: 52,
-          borderRadius: 12,
-          background: "var(--color-accent)",
+          background: "var(--color-card)",
+          borderRadius: 19,
+          padding: "32px 28px 36px",
+          height: "100%",
+          position: "relative",
+          overflow: "hidden",
+          transition: "transform 0.35s cubic-bezier(.22,.61,.36,1), box-shadow 0.35s ease",
+          transform: hovered ? "translateY(-6px)" : "translateY(0)",
+          boxShadow: hovered
+            ? "0 24px 56px -16px oklch(0.78 0.14 75 / 0.18), 0 8px 24px -8px oklch(0 0 0 / 0.28)"
+            : "0 2px 12px -4px oklch(0 0 0 / 0.18)",
         }}
       >
-        <Icon style={{ width: 26, height: 26, color: "var(--color-gold)" }} />
+        {/* Faint background number */}
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: -10,
+            right: 16,
+            fontSize: 92,
+            fontWeight: 900,
+            lineHeight: 1,
+            fontFamily: "var(--font-display)",
+            color: "var(--color-gold)",
+            opacity: hovered ? 0.09 : 0.05,
+            transition: "opacity 0.35s ease",
+            pointerEvents: "none",
+            userSelect: "none",
+            letterSpacing: "-0.02em",
+          }}
+        >
+          {String(num).padStart(2, "0")}
+        </div>
+
+        {/* Icon */}
+        <div
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: 14,
+            background: hovered ? "oklch(0.78 0.14 75 / 0.18)" : "oklch(0.78 0.14 75 / 0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 20,
+            transition: "background 0.35s ease, box-shadow 0.35s ease",
+            boxShadow: hovered ? "0 0 28px oklch(0.78 0.14 75 / 0.32)" : "none",
+          }}
+        >
+          <Icon style={{ width: 26, height: 26, color: "var(--color-gold)" }} />
+        </div>
+
+        <div style={{ fontSize: 18, fontWeight: 700, color: "var(--color-foreground)", marginBottom: 10, lineHeight: 1.25 }}>
+          {title}
+        </div>
+        <p style={{ fontSize: 14, color: "var(--color-muted-foreground)", lineHeight: 1.7 }}>
+          {desc}
+        </p>
+
+        {/* Bottom accent line */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: "15%",
+            right: "15%",
+            height: 2,
+            borderRadius: "2px 2px 0 0",
+            background: hovered
+              ? "linear-gradient(90deg, transparent, oklch(0.78 0.14 75 / 0.85), transparent)"
+              : "transparent",
+            transition: "background 0.4s ease",
+          }}
+        />
       </div>
-      <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-foreground)", marginBottom: 8, lineHeight: 1.3 }}>
-        {title}
-      </div>
-      <p style={{ fontSize: 14, color: "var(--color-muted-foreground)", lineHeight: 1.6, fontWeight: 400 }}>
-        {desc}
-      </p>
     </div>
   );
 }
@@ -99,7 +156,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between p-5 text-left transition hover:bg-muted/20"
       >
-        <span className="font-semibold text-white">{question}</span>
+        <span className="font-semibold text-foreground">{question}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-gold transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
@@ -199,7 +256,7 @@ function Landing() {
             <Sparkles className="h-3 w-3" /> {t("landing_badge")}
           </div>
           <h1 className="font-display text-5xl leading-none tracking-wide md:text-7xl lg:text-8xl">
-            {t("landing_hero").split("\n").map((line, i) => (
+            {t("landing_hero").split("\n").map((_line, i) => (
               <span key={i}>
                 {i === 0 ? (
                   <>Tudo que sua <span className="text-gold">barbearia</span><br /></>
@@ -230,19 +287,23 @@ function Landing() {
       </section>
 
       {/* ── Features */}
-      <section className="border-t border-border py-20">
+      <section className="border-t border-border bg-muted/10 py-24">
         <div className="mx-auto max-w-6xl px-4">
-          <div className="mb-12 text-center">
-            <h2 style={{ fontSize: 32, fontWeight: 700, color: "var(--color-foreground)", lineHeight: 1.2 }}>
-              Tudo que sua barbearia precisa
+          <div className="mb-16 text-center">
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-gold">
+              <Sparkles className="h-3 w-3" /> Funcionalidades
+            </div>
+            <h2 className="font-display text-4xl tracking-wide md:text-5xl lg:text-6xl">
+              Tudo que sua barbearia{" "}
+              <span className="text-gold">precisa</span>
             </h2>
-            <p className="mt-3" style={{ fontSize: 16, color: "var(--color-muted-foreground)" }}>
-              Cada detalhe pensado para o seu dia a dia.
+            <p className="mx-auto mt-4 max-w-xl" style={{ fontSize: 16, color: "var(--color-muted-foreground)", lineHeight: 1.7 }}>
+              Cada detalhe pensado para o dia a dia do barbeiro profissional.
             </p>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
-              <Feature key={f.title} icon={f.icon} title={f.title} desc={f.desc} />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {features.map((f, i) => (
+              <Feature key={f.title} icon={f.icon} title={f.title} desc={f.desc} num={i + 1} />
             ))}
           </div>
         </div>

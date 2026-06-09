@@ -48,17 +48,22 @@ export const authService = {
   async signUp(
     email: string,
     password: string,
-    barbershopName: string,
+    options: { barbershopName: string; fullName?: string; phone?: string },
   ): Promise<ServiceResult<null>> {
     try {
-      const { data: auth, error: authErr } = await supabase.auth.signUp({ email, password });
+      const { data: auth, error: authErr } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: options.fullName } },
+      });
       if (authErr) throw authErr;
       if (!auth.user) throw new Error("Usuário não criado");
 
-      const slug = slugify(barbershopName) || "minha-barbearia";
+      const slug = slugify(options.barbershopName) || "minha-barbearia";
       const { error: bsErr } = await supabase.from("barbershops").insert({
         owner_id: auth.user.id,
-        name: barbershopName,
+        name: options.barbershopName,
+        phone: options.phone ?? null,
         slug,
         onboarded: false,
         booking_interval_minutes: 30,
