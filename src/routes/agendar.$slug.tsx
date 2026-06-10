@@ -82,7 +82,7 @@ function PublicBooking() {
         setBs(b);
         const [s, p, h, ph, ps] = await Promise.all([
           supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
-          supabase.from("professionals").select("id, name, specialties").eq("barbershop_id", b.id).eq("active", true),
+          supabase.from("professionals").select("id, name").eq("barbershop_id", b.id).eq("active", true),
           supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
           supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
           supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
@@ -116,19 +116,23 @@ function PublicBooking() {
     professionalHours.find((x) => x.professional_id === professionalId && x.day_of_week === dow) ??
     hours.find((x) => x.day_of_week === dow);
 
-  const availableDates: { date: string; label: string; closed: boolean }[] = [];
-  if (bs) {
+  const availableDates = useMemo(() => {
+    if (!bs) return [];
+    const out: { date: string; label: string; closed: boolean }[] = [];
     for (let i = 0; i < (bs.max_advance_days ?? 30); i++) {
       const d = addDays(new Date(), i);
       const dow = d.getDay();
-      const h = hours.find((x) => x.day_of_week === dow);
-      availableDates.push({
+      const h = profId
+        ? (professionalHours.find((x) => x.professional_id === profId && x.day_of_week === dow) ?? hours.find((x) => x.day_of_week === dow))
+        : hours.find((x) => x.day_of_week === dow);
+      out.push({
         date: fmtDate(d),
         label: new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).format(d),
         closed: !h || h.is_closed,
       });
     }
-  }
+    return out;
+  }, [bs, hours, professionalHours, profId]);
 
   const [slots, setSlots] = useState<string[]>([]);
   useEffect(() => {

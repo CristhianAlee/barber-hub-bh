@@ -702,13 +702,23 @@ function ServicesTab() {
 
   const add = async () => {
     if (!form.name.trim() || !barbershop) return;
-    const { error } = await supabase.from("services").insert({
+    const { data: svc, error } = await supabase.from("services").insert({
       barbershop_id: barbershop.id,
       name: form.name,
       duration_minutes: form.duration,
       price: form.price,
-    });
-    if (error) return toast.error(error.message);
+    }).select("id").single();
+    if (error || !svc) return toast.error(error?.message ?? "Erro");
+    const { data: existingLinks } = await supabase
+      .from("professional_services")
+      .select("professional_id")
+      .eq("barbershop_id", barbershop.id);
+    if (existingLinks && existingLinks.length > 0) {
+      const profIds = Array.from(new Set(existingLinks.map((l: any) => l.professional_id)));
+      await supabase.from("professional_services").insert(
+        profIds.map((pid) => ({ barbershop_id: barbershop.id, professional_id: pid, service_id: svc.id }))
+      );
+    }
     setForm({ name: "", duration: 30, price: 0 });
     load();
   };
