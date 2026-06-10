@@ -470,7 +470,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
     setSaving(true);
     const { error } = await supabase.from("financial_entries").insert({
       barbershop_id: barbershop.id,
-      type, category: category || null, description: description || null,
+      type, category: category.trim() || "Outros", description: description || null,
       amount: a, date, payment_method: paymentMethod as any,
     });
     setSaving(false);

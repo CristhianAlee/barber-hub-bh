@@ -303,7 +303,11 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
   }, [barbershop, services, serviceId, hours, professionalHours, profId, busy, date]);
 
   const availableProfs = serviceId
-    ? profs.filter((p) => professionalServices.some((ps) => ps.professional_id === p.id && ps.service_id === serviceId))
+    ? profs.filter((p) => {
+        const links = professionalServices.filter((ps) => ps.professional_id === p.id);
+        if (links.length === 0) return true;
+        return links.some((ps) => ps.service_id === serviceId);
+      })
     : profs;
 
   const submit = async () => {
