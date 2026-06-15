@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { brl, formatDateBR } from "@/lib/format";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { Plus, TrendingUp, TrendingDown, DollarSign, Receipt, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -360,7 +361,10 @@ function CustosFixosTab() {
       barbershop_id: barbershop.id, name, amount: a, due_day: Number(dueDay),
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[Financeiro] custo fixo:", error);
+      return toast.error(getFriendlyErrorMessage(error, "salvar o custo fixo"));
+    }
     setName(""); setAmount(""); setDueDay("1");
     load();
   };
@@ -474,7 +478,10 @@ function EntryForm({ onDone }: { onDone: () => void }) {
       amount: a, date, payment_method: paymentMethod as any,
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[Financeiro] lançamento:", error);
+      return toast.error(getFriendlyErrorMessage(error, "salvar lançamento"));
+    }
     toast.success(t("fin_registered"));
     onDone();
   };

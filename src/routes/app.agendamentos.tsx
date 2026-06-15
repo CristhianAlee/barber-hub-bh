@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { toast } from "sonner";
 import { Checkout } from "@/components/Checkout";
 
@@ -368,7 +369,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
     if (error) {
       console.error("[NewAppt] erro agendamento:", error);
       if (error.code === "23505") return toast.error("Horário já ocupado, escolha outro");
-      return toast.error(error.message);
+      return toast.error(getFriendlyErrorMessage(error, "salvar o agendamento"));
     }
     toast.success("Agendamento criado");
     onCreated();
@@ -547,7 +548,11 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
       .update({ date: nextDate, time: nextTime, status: "confirmed" })
       .eq("id", appointment.id);
     setSaving(false);
-    if (error) return toast.error(error.code === "23505" ? "Horário já ocupado, escolha outro" : error.message);
+    if (error) {
+      console.error("[Reschedule] erro:", error);
+      if (error.code === "23505") return toast.error("Horário já ocupado, escolha outro");
+      return toast.error(getFriendlyErrorMessage(error, "reagendar"));
+    }
     toast.success("Agendamento reagendado");
     onDone();
   };

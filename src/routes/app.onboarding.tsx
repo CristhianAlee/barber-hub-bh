@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,7 +77,10 @@ function Onboarding() {
         slug, onboarded: false, booking_interval_minutes: 30, max_advance_days: 30,
       });
       setLoading(false);
-      if (error) return toast.error("Erro ao criar barbearia: " + error.message);
+      if (error) {
+        console.error("[Onboarding] criar barbearia:", error);
+        return toast.error(getFriendlyErrorMessage(error, "criar a barbearia"));
+      }
     } else {
       const { error } = await supabase
         .from("barbershops").update({ name: bsName, address: address || null }).eq("id", barbershop.id);

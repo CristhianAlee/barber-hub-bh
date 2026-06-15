@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth/verify")({
@@ -25,7 +26,10 @@ function Verify() {
       options: { emailRedirectTo: `${window.location.origin}/app` },
     });
     setResending(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[Verify] reenviar e-mail:", error);
+      return toast.error(getFriendlyErrorMessage(error, "reenviar o e-mail"));
+    }
     toast.success("E-mail reenviado!");
     setCooldown(30);
     const id = setInterval(() => {

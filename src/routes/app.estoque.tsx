@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brl, formatDateBR } from "@/lib/format";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { Plus, Search, Loader2, ArrowDown, ArrowUp, Package } from "lucide-react";
 import { toast } from "sonner";
 
@@ -252,7 +253,10 @@ function ProductForm({ onDone }: { onDone: () => void }) {
       min_stock_alert: Number(min) || 0,
     });
     setSaving(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      console.error("[Estoque] cadastrar produto:", error);
+      return toast.error(getFriendlyErrorMessage(error, "salvar produto"));
+    }
     toast.success("Produto cadastrado");
     onDone();
   };
@@ -296,10 +300,10 @@ function MovementForm({ product, onDone }: { product: Product; onDone: () => voi
     const newStock = type === "in" ? product.stock_quantity + q : product.stock_quantity - q;
     if (newStock < 0) { setSaving(false); return toast.error("Estoque ficaria negativo"); }
     const { error: e1 } = await supabase.from("stock_movements").insert({ product_id: product.id, type, quantity: q, reason: reason || null });
-    if (e1) { setSaving(false); return toast.error(e1.message); }
+    if (e1) { setSaving(false); console.error("[Estoque] movimento:", e1); return toast.error(getFriendlyErrorMessage(e1, "atualizar estoque")); }
     const { error: e2 } = await supabase.from("products").update({ stock_quantity: newStock }).eq("id", product.id);
     setSaving(false);
-    if (e2) return toast.error(e2.message);
+    if (e2) { console.error("[Estoque] atualizar saldo:", e2); return toast.error(getFriendlyErrorMessage(e2, "atualizar estoque")); }
     toast.success("Movimentação registrada");
     onDone();
   };

@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { brl } from "@/lib/format";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { Loader2, Sparkles, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -74,7 +75,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       if (saleErr || !sale) {
         console.error("[Checkout] Falha ao criar venda:", saleErr);
         setSubmitting(false);
-        return toast.error(`Erro ao registrar venda: ${saleErr?.message ?? "desconhecido"}`);
+        return toast.error(getFriendlyErrorMessage(saleErr, "finalizar atendimento"));
       }
 
       // 2. Create sale_items
@@ -146,7 +147,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       onDone();
     } catch (err: any) {
       console.error("[Checkout] Erro inesperado:", err);
-      toast.error(`Erro inesperado: ${err?.message ?? "tente novamente"}`);
+      toast.error(getFriendlyErrorMessage(err, "finalizar atendimento"));
     } finally {
       setSubmitting(false);
     }

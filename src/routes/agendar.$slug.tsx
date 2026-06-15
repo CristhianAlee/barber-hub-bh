@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/hooks/useLanguage";
 import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -241,7 +242,8 @@ function PublicBooking() {
       .insert({ id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null });
     if (clientError) {
       setSubmitting(false);
-      return toast.error(`Erro ao salvar cliente: ${clientError.message}`);
+      console.error("[agendar.submit] cliente", clientError);
+      return toast.error(getFriendlyErrorMessage(clientError, "agendar"));
     }
 
     const apptPayload = {
@@ -257,8 +259,9 @@ function PublicBooking() {
     const { error } = await supabase.from("appointments").insert(apptPayload);
     if (error) {
       setSubmitting(false);
+      console.error("[agendar.submit] agendamento", error);
       if (error.code === "23505") { setTime(""); return toast.error("Horário já ocupado, escolha outro"); }
-      return toast.error(`Erro ao agendar: ${error.message}`);
+      return toast.error(getFriendlyErrorMessage(error, "agendar"));
     }
 
     const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";

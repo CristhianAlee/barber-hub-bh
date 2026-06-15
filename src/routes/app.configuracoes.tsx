@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { AlertTriangle, Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
 import { brl, copyToClipboard, formatPhone } from "@/lib/format";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { storageService } from "@/services/storageService";
 
 export const Route = createFileRoute("/app/configuracoes")({
@@ -168,7 +169,8 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
       const { error: logoErr } = await storageService.uploadLogo(barbershop.id, pendingLogoFile);
       if (logoErr) {
         setSaving(false);
-        return toast.error(`Erro ao enviar logo: ${logoErr}`);
+        console.error("[Config] enviar logo:", logoErr);
+        return toast.error(getFriendlyErrorMessage(logoErr, "enviar a logo"));
       }
       setPendingLogoFile(null);
     }
@@ -350,7 +352,10 @@ function ProfessionalsTab() {
       .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") })
       .select("id")
       .single();
-    if (error || !created) return toast.error(error?.message ?? "Erro ao adicionar");
+    if (error || !created) {
+      console.error("[Config] adicionar profissional:", error);
+      return toast.error(getFriendlyErrorMessage(error, "salvar profissional"));
+    }
     const { data: activeServices } = await supabase.from("services").select("id").eq("barbershop_id", barbershop.id).eq("active", true);
     if (activeServices && activeServices.length > 0) {
       await supabase.from("professional_services").insert(
@@ -506,7 +511,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
       onClose();
     } catch (e: any) {
       console.error(e);
-      toast.error(e.message ?? "Erro ao salvar");
+      toast.error(getFriendlyErrorMessage(e, "salvar configurações"));
     } finally {
       setSaving(false);
     }
@@ -708,7 +713,10 @@ function ServicesTab() {
       duration_minutes: form.duration,
       price: form.price,
     }).select("id").single();
-    if (error || !svc) return toast.error(error?.message ?? "Erro");
+    if (error || !svc) {
+      console.error("[Config] adicionar serviço:", error);
+      return toast.error(getFriendlyErrorMessage(error, "salvar serviço"));
+    }
     const { data: existingLinks } = await supabase
       .from("professional_services")
       .select("professional_id")

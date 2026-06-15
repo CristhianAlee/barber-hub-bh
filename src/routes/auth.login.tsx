@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
+import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock } from "lucide-react";
@@ -35,7 +36,8 @@ function Login() {
     const { error } = await authService.signIn(email, password);
     setLoading(false);
     if (error) {
-      toast.error(error.includes("Invalid") ? "E-mail ou senha incorretos" : error);
+      console.error("[Login] signIn:", error);
+      toast.error(error.includes("Invalid") ? "E-mail ou senha incorretos" : getFriendlyErrorMessage(error, "fazer login"));
       return;
     }
     toast.success("Bem-vindo de volta!");
