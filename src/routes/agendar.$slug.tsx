@@ -1,6 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabasePublic } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,19 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const timeToMinutes = (value: string) => {
   const [hh, mm] = value.split(":").map(Number);
   return hh * 60 + mm;
+};
+
+/** UUID v4 válido. crypto.randomUUID exige secure context (https); em
+ *  http (localhost/LAN) ele não existe — getRandomValues funciona sempre. */
+const safeUuid = (): string => {
+  const c = globalThis.crypto;
+  if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  const b = new Uint8Array(16);
+  c.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0"));
+  return `${h[0]}${h[1]}${h[2]}${h[3]}-${h[4]}${h[5]}-${h[6]}${h[7]}-${h[8]}${h[9]}-${h[10]}${h[11]}${h[12]}${h[13]}${h[14]}${h[15]}`;
 };
 
 function LangToggle() {
@@ -72,8 +85,8 @@ function PublicBooking() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: b, error: bErr } = await supabase
-          .from("barbershops")
+        const { data: b, error: bErr } = await supabasePublic
+          .from("public_barbershops")
           .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days")
           .eq("slug", slug)
           .maybeSingle();
@@ -82,7 +95,7 @@ function PublicBooking() {
         setBs(b);
         const [s, p, h, ph, ps] = await Promise.all([
           supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
-          supabase.from("professionals").select("id, name").eq("barbershop_id", b.id).eq("active", true),
+          supabasePublic.from("public_professionals").select("id, name").eq("barbershop_id", b.id),
           supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
           supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
           supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
@@ -145,12 +158,8 @@ function PublicBooking() {
       if (candidateProfs.length === 0) { setSlots([]); return; }
 
       const interval = bs.booking_interval_minutes ?? 30;
-      const { data: existing } = await supabase
-        .from("appointments")
-        .select("time, duration_minutes, professional_id")
-        .eq("barbershop_id", bs.id)
-        .eq("date", date)
-        .neq("status", "cancelled");
+      const { data: existing } = await supabasePublic
+        .rpc("get_booked_slots", { p_barbershop_id: bs.id, p_date: date });
 
       const out = new Set<string>();
       const now = new Date();
@@ -193,12 +202,8 @@ function PublicBooking() {
     let finalProfId = profId;
     if (!finalProfId) {
       const dow = new Date(date + "T00:00:00").getDay();
-      const { data: existing } = await supabase
-        .from("appointments")
-        .select("time, duration_minutes, professional_id")
-        .eq("barbershop_id", bs.id)
-        .eq("date", date)
-        .neq("status", "cancelled");
+      const { data: existing } = await supabasePublic
+        .rpc("get_booked_slots", { p_barbershop_id: bs.id, p_date: date });
       finalProfId = professionalsForService.find((candidate) => {
         const h = getHoursForProfessional(candidate.id, dow);
         if (!h || h.is_closed) return false;
@@ -217,25 +222,19 @@ function PublicBooking() {
 
     setSubmitting(true);
 
-    const { data: clash } = await supabase
-      .from("appointments")
-      .select("id")
-      .eq("barbershop_id", bs.id)
-      .eq("professional_id", finalProfId)
-      .eq("date", date)
-      .eq("time", time)
-      .neq("status", "cancelled");
-    if (clash && clash.length > 0) {
+    const { data: booked } = await supabasePublic
+      .rpc("get_booked_slots", { p_barbershop_id: bs.id, p_date: date });
+    const clash = (booked ?? []).filter(
+      (a) => a.professional_id === finalProfId && String(a.time).slice(0, 5) === time,
+    );
+    if (clash.length > 0) {
       setSubmitting(false);
       setTime("");
       return toast.error("Horário já ocupado, escolha outro");
     }
 
     const phoneDigits = onlyDigits(phone);
-    const clientId =
-      typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const clientId = safeUuid();
 
     const { error: clientError } = await supabase
       .from("clients")

@@ -17,6 +17,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["barbershops"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["barbershops"]["Insert"]>;
+        Relationships: [];
       };
       business_hours: {
         Row: {
@@ -29,6 +30,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["business_hours"]["Row"], "id">;
         Update: Partial<Database["public"]["Tables"]["business_hours"]["Insert"]>;
+        Relationships: [];
       };
       professional_business_hours: {
         Row: {
@@ -42,6 +44,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["professional_business_hours"]["Row"], "id">;
         Update: Partial<Database["public"]["Tables"]["professional_business_hours"]["Insert"]>;
+        Relationships: [];
       };
       professionals: {
         Row: {
@@ -55,6 +58,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["professionals"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["professionals"]["Insert"]>;
+        Relationships: [];
       };
       services: {
         Row: {
@@ -68,11 +72,13 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["services"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["services"]["Insert"]>;
+        Relationships: [];
       };
       professional_services: {
         Row: { professional_id: string; service_id: string; barbershop_id: string };
         Insert: Database["public"]["Tables"]["professional_services"]["Row"];
         Update: Partial<Database["public"]["Tables"]["professional_services"]["Row"]>;
+        Relationships: [];
       };
       clients: {
         Row: {
@@ -92,6 +98,7 @@ export interface Database {
           "id" | "created_at" | "total_visits" | "total_spent"
         >;
         Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
+        Relationships: [];
       };
       appointments: {
         Row: {
@@ -109,6 +116,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["appointments"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["appointments"]["Insert"]>;
+        Relationships: [];
       };
       products: {
         Row: {
@@ -126,6 +134,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["products"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["products"]["Insert"]>;
+        Relationships: [];
       };
       stock_movements: {
         Row: {
@@ -138,6 +147,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["stock_movements"]["Row"], "id" | "created_at">;
         Update: never;
+        Relationships: [];
       };
       sales: {
         Row: {
@@ -152,6 +162,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["sales"]["Row"], "id" | "created_at">;
         Update: never;
+        Relationships: [];
       };
       sale_items: {
         Row: {
@@ -165,6 +176,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["sale_items"]["Row"], "id">;
         Update: never;
+        Relationships: [];
       };
       financial_entries: {
         Row: {
@@ -182,6 +194,7 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["financial_entries"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["financial_entries"]["Insert"]>;
+        Relationships: [];
       };
       fixed_costs: {
         Row: {
@@ -195,6 +208,47 @@ export interface Database {
         };
         Insert: Omit<Database["public"]["Tables"]["fixed_costs"]["Row"], "id" | "created_at">;
         Update: Partial<Database["public"]["Tables"]["fixed_costs"]["Insert"]>;
+        Relationships: [];
+      };
+    };
+    Views: {
+      // View pública do link de agendamento — sem owner_id.
+      public_barbershops: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          phone: string | null;
+          address: string | null;
+          logo_url: string | null;
+          booking_interval_minutes: number;
+          max_advance_days: number;
+          onboarded: boolean;
+        };
+        Relationships: [];
+      };
+      // View pública do link de agendamento — sem phone.
+      public_professionals: {
+        Row: {
+          id: string;
+          barbershop_id: string;
+          name: string;
+          avatar_url: string | null;
+          active: boolean;
+        };
+        Relationships: [];
+      };
+    };
+    Functions: {
+      // Horários ocupados (SECURITY DEFINER) — substitui o SELECT anônimo
+      // direto em appointments no link de agendamento.
+      get_booked_slots: {
+        Args: { p_barbershop_id: string; p_date: string };
+        Returns: {
+          professional_id: string;
+          time: string;
+          duration_minutes: number;
+        }[];
       };
     };
   };
