@@ -23,6 +23,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { errors, validate, clearError } = useFormValidation(loginSchema);
+  const [loginError, setLoginError] = useState("");
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -35,13 +36,16 @@ function Login() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError("");
     if (!validate({ email, password })) return;
     setLoading(true);
     const { error } = await authService.signIn(email, password);
     setLoading(false);
     if (error) {
       console.error("[Login] signIn:", error);
-      toast.error(error.includes("Invalid") ? "E-mail ou senha incorretos" : getFriendlyErrorMessage(error, "fazer login"));
+      const msg = error.includes("Invalid") ? "E-mail ou senha incorretos" : getFriendlyErrorMessage(error, "fazer login");
+      setLoginError(msg);
+      toast.error(msg);
       return;
     }
     toast.success("Bem-vindo de volta!");
@@ -65,7 +69,7 @@ function Login() {
               autoComplete="email"
               maxLength={254}
               value={email}
-              onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
+              onChange={(e) => { setEmail(e.target.value); clearError("email"); setLoginError(""); }}
               className="pl-9"
               placeholder="voce@barbearia.com"
             />
@@ -83,7 +87,7 @@ function Login() {
               autoComplete="current-password"
               maxLength={128}
               value={password}
-              onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
+              onChange={(e) => { setPassword(e.target.value); clearError("password"); setLoginError(""); }}
               className="pl-9"
               placeholder="••••••••"
             />
@@ -95,6 +99,11 @@ function Login() {
             {t("auth_forgot")}
           </Link>
         </div>
+        {loginError && (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
+            {loginError}
+          </p>
+        )}
         <Button
           type="submit"
           disabled={loading}

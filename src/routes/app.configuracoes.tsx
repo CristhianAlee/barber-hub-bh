@@ -278,7 +278,21 @@ function BusinessHours() {
         .select("*")
         .eq("barbershop_id", barbershop.id)
         .order("day_of_week");
-      setHours(data ?? []);
+      const existing = data ?? [];
+      // Garante os 7 dias mesmo se a tabela estiver vazia/incompleta.
+      // Padrão: Seg–Sex 08:00–20:00, Sáb 08:00–15:00, Dom fechado.
+      const merged = Array.from({ length: 7 }, (_, dow) => {
+        const found = existing.find((h: any) => h.day_of_week === dow);
+        if (found) return found;
+        return {
+          barbershop_id: barbershop.id,
+          day_of_week: dow,
+          open_time: "08:00",
+          close_time: dow === 6 ? "15:00" : "20:00",
+          is_closed: dow === 0,
+        };
+      });
+      setHours(merged);
       setLoading(false);
     })();
   }, [barbershop]);
