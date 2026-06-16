@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
 import { brl, copyToClipboard, formatPhone } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { barbershopSettingsSchema, professionalSchema, serviceSchema } from "@/lib/validationSchemas";
 import { storageService } from "@/services/storageService";
 
 export const Route = createFileRoute("/app/configuracoes")({
@@ -175,6 +176,8 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
       setPendingLogoFile(null);
     }
 
+    const parsedSettings = barbershopSettingsSchema.safeParse({ name, address: address || "", phone: phone.replace(/\D/g, "") });
+    if (!parsedSettings.success) { setSaving(false); return toast.error(parsedSettings.error.errors[0].message); }
     const { error } = await supabase
       .from("barbershops")
       .update({
@@ -219,15 +222,15 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-1.5">
           <Label>{t("settings_name")}</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label>{t("settings_phone")}</Label>
-          <Input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} />
+          <Input maxLength={20} value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} />
         </div>
         <div className="space-y-1.5 md:col-span-2">
           <Label>{t("settings_address")}</Label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+          <Input maxLength={200} value={address} onChange={(e) => setAddress(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label>{t("settings_interval")}</Label>
@@ -347,6 +350,8 @@ function ProfessionalsTab() {
   const add = async () => {
     if (!name.trim() || !barbershop) return toast.error("Informe o nome");
     if (phone.replace(/\D/g, "").length < 10) return toast.error("Telefone obrigatório");
+    const parsedProf = professionalSchema.safeParse({ name, phone: phone.replace(/\D/g, "") });
+    if (!parsedProf.success) return toast.error(parsedProf.error.errors[0].message);
     const { data: created, error } = await supabase
       .from("professionals")
       .insert({ barbershop_id: barbershop.id, name, phone: phone.replace(/\D/g, "") })
@@ -380,8 +385,8 @@ function ProfessionalsTab() {
   return (
     <Card className="border-border bg-card p-5">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
-        <Input className="md:col-span-5" placeholder={t("settings_name")} value={name} onChange={(e) => setName(e.target.value)} />
-        <Input className="md:col-span-5" placeholder={t("settings_prof_phone")} value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} />
+        <Input className="md:col-span-5" maxLength={100} placeholder={t("settings_name")} value={name} onChange={(e) => setName(e.target.value)} />
+        <Input className="md:col-span-5" maxLength={20} placeholder={t("settings_prof_phone")} value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} />
         <Button className="md:col-span-2 bg-gradient-gold text-gold-foreground hover:opacity-90" onClick={add}>
           <Plus className="mr-1 h-4 w-4" /> {t("add")}
         </Button>
@@ -707,6 +712,8 @@ function ServicesTab() {
 
   const add = async () => {
     if (!form.name.trim() || !barbershop) return;
+    const parsedSvc = serviceSchema.safeParse({ name: form.name, duration_minutes: form.duration, price: form.price });
+    if (!parsedSvc.success) return toast.error(parsedSvc.error.errors[0].message);
     const { data: svc, error } = await supabase.from("services").insert({
       barbershop_id: barbershop.id,
       name: form.name,
@@ -743,7 +750,7 @@ function ServicesTab() {
   return (
     <Card className="border-border bg-card p-5">
       <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
-        <Input className="md:col-span-5" placeholder={t("settings_service_name")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <Input className="md:col-span-5" maxLength={80} placeholder={t("settings_service_name")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <Input className="md:col-span-3" type="number" placeholder={t("settings_service_duration")} value={form.duration} onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })} />
         <Input className="md:col-span-2" type="number" placeholder={t("settings_service_price")} value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
         <Button className="md:col-span-2 bg-gradient-gold text-gold-foreground hover:opacity-90" onClick={add}>

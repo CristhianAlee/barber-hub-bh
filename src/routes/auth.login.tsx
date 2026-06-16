@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { loginSchema } from "@/lib/validationSchemas";
+import { useFormValidation } from "@/hooks/useFormValidation";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock } from "lucide-react";
@@ -20,6 +22,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const { errors, validate, clearError } = useFormValidation(loginSchema);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -32,6 +35,7 @@ function Login() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate({ email, password })) return;
     setLoading(true);
     const { error } = await authService.signIn(email, password);
     setLoading(false);
@@ -59,12 +63,14 @@ function Login() {
               type="email"
               required
               autoComplete="email"
+              maxLength={254}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); clearError("email"); }}
               className="pl-9"
               placeholder="voce@barbearia.com"
             />
           </div>
+          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="password">{t("auth_password")}</Label>
@@ -75,12 +81,14 @@ function Login() {
               type="password"
               required
               autoComplete="current-password"
+              maxLength={128}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); clearError("password"); }}
               className="pl-9"
               placeholder="••••••••"
             />
           </div>
+          {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
         </div>
         <div className="flex items-center justify-end text-sm">
           <Link to="/auth/recover" className="text-gold hover:underline">

@@ -10,6 +10,8 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { formatPhone, onlyDigits, passwordStrength } from "@/lib/format";
+import { signupSchema } from "@/lib/validationSchemas";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 export const Route = createFileRoute("/auth/signup")({
   component: Signup,
@@ -30,6 +32,7 @@ function Signup() {
   });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const { validate } = useFormValidation(signupSchema);
 
   const handleGoogleAuth = async () => {
     setGoogleLoading(true);
@@ -54,6 +57,7 @@ function Signup() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!valid) return;
+    if (!validate({ name: form.name, email: form.email, password: form.password, barbershop_name: form.barbershop, phone: phoneDigits })) return;
     setLoading(true);
     const { error } = await authService.signUp(form.email, form.password, {
       fullName: form.name,
@@ -89,17 +93,18 @@ function Signup() {
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="name">{t("name")}</Label>
-          <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <Input id="name" maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bs">{t("auth_bname")}</Label>
-          <Input id="bs" value={form.barbershop} onChange={(e) => setForm({ ...form, barbershop: e.target.value })} required />
+          <Input id="bs" maxLength={100} value={form.barbershop} onChange={(e) => setForm({ ...form, barbershop: e.target.value })} required />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">{t("phone")}</Label>
           <Input
             id="phone"
             inputMode="tel"
+            maxLength={20}
             value={form.phone}
             onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
             placeholder="(00) 00000-0000"
@@ -108,13 +113,14 @@ function Signup() {
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">{t("auth_email")}</Label>
-          <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          <Input id="email" type="email" maxLength={254} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pw">{t("auth_password")}</Label>
           <Input
             id="pw"
             type="password"
+            maxLength={128}
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
@@ -148,6 +154,7 @@ function Signup() {
           <Input
             id="confirm"
             type="password"
+            maxLength={128}
             value={form.confirm}
             onChange={(e) => setForm({ ...form, confirm: e.target.value })}
             required

@@ -290,7 +290,7 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
 
       <div className="space-y-1.5">
         <Label>{t("clients_notes")}</Label>
-        <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+        <Textarea value={notes} maxLength={500} onChange={(e) => setNotes(e.target.value)} rows={2} />
         <Button size="sm" onClick={saveNotes} disabled={saving} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Save className="mr-1 h-3.5 w-3.5" /> {t("save")}</>}
         </Button>

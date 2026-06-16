@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { brl, formatDateBR } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { financialEntrySchema, fixedCostSchema } from "@/lib/validationSchemas";
 import { Plus, TrendingUp, TrendingDown, DollarSign, Receipt, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -356,6 +357,8 @@ function CustosFixosTab() {
     if (!barbershop) return;
     const a = Number(amount);
     if (!name.trim() || !a || a <= 0) return toast.error("Preencha nome e valor");
+    const parsed = fixedCostSchema.safeParse({ name, amount: a, due_day: Number(dueDay) });
+    if (!parsed.success) return toast.error(parsed.error.errors[0].message);
     setSaving(true);
     const { error } = await supabase.from("fixed_costs").insert({
       barbershop_id: barbershop.id, name, amount: a, due_day: Number(dueDay),
@@ -385,7 +388,7 @@ function CustosFixosTab() {
     <div className="space-y-4 pt-2">
       <Card className="border-border bg-card p-4">
         <div className="grid grid-cols-12 gap-2">
-          <Input className="col-span-5" placeholder="Nome (ex: Aluguel)" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="col-span-5" maxLength={100} placeholder="Nome (ex: Aluguel)" value={name} onChange={(e) => setName(e.target.value)} />
           <Input className="col-span-3" type="number" step="0.01" placeholder="R$" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Select value={dueDay} onValueChange={setDueDay}>
             <SelectTrigger className="col-span-2"><SelectValue placeholder="Dia" /></SelectTrigger>
@@ -471,6 +474,14 @@ function EntryForm({ onDone }: { onDone: () => void }) {
     if (!barbershop) return toast.error("Barbearia não encontrada. Recarregue a página.");
     const a = Number(amount);
     if (!a || a <= 0) return toast.error("Valor inválido");
+    const parsed = financialEntrySchema.safeParse({
+      description: description || "",
+      amount: a,
+      category: category.trim() || "Outros",
+      date,
+      payment_method: paymentMethod,
+    });
+    if (!parsed.success) return toast.error(parsed.error.errors[0].message);
     setSaving(true);
     const { error } = await supabase.from("financial_entries").insert({
       barbershop_id: barbershop.id,
@@ -512,11 +523,11 @@ function EntryForm({ onDone }: { onDone: () => void }) {
         </div>
         <div className="space-y-1.5">
           <Label>{t("category")}</Label>
-          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={type === "income" ? "Serviços, produtos..." : "Aluguel, materiais..."} />
+          <Input maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={type === "income" ? "Serviços, produtos..." : "Aluguel, materiais..."} />
         </div>
         <div className="space-y-1.5">
           <Label>{t("description")}</Label>
-          <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+          <Input maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label>{t("fin_payment_method")}</Label>

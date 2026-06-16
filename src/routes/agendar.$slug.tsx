@@ -9,6 +9,8 @@ import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/hooks/useLanguage";
 import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { publicBookingSchema } from "@/lib/validationSchemas";
+import { useFormValidation } from "@/hooks/useFormValidation";
 import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -82,6 +84,7 @@ function PublicBooking() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
+  const { errors, validate, clearError } = useFormValidation(publicBookingSchema);
 
   useEffect(() => {
     (async () => {
@@ -199,6 +202,7 @@ function PublicBooking() {
 
   const submit = async () => {
     if (!bs || !service || !date || !time || !name.trim() || onlyDigits(phone).length < 10) return;
+    if (!validate({ name, phone: onlyDigits(phone), email, notes })) return;
 
     let finalProfId = profId;
     if (!finalProfId) {
@@ -490,19 +494,23 @@ function PublicBooking() {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label>{t("book_full_name")}</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} required />
+                <Input value={name} maxLength={100} onChange={(e) => { setName(e.target.value); clearError("name"); }} required />
+                {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>{t("book_whatsapp")}</Label>
-                <Input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="(00) 00000-0000" />
+                <Input value={phone} maxLength={20} onChange={(e) => { setPhone(formatPhone(e.target.value)); clearError("phone"); }} placeholder="(00) 00000-0000" />
+                {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>{t("book_email_opt")}</Label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input type="email" value={email} maxLength={254} onChange={(e) => { setEmail(e.target.value); clearError("email"); }} />
+                {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>{t("book_obs_opt")}</Label>
-                <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Ex: degradê alto" />
+                <Input value={notes} maxLength={500} onChange={(e) => { setNotes(e.target.value); clearError("notes"); }} placeholder="Ex: degradê alto" />
+                {errors.notes && <p className="text-xs text-destructive">{errors.notes}</p>}
               </div>
 
               {/* Resumo */}
@@ -521,7 +529,7 @@ function PublicBooking() {
               </p>
               <Button
                 onClick={submit}
-                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10}
+                disabled={submitting || !name.trim() || onlyDigits(phone).length < 10 || Object.keys(errors).length > 0}
                 className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
                 size="lg"
               >

@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { appointmentSchema } from "@/lib/validationSchemas";
 import { toast } from "sonner";
 import { Checkout } from "@/components/Checkout";
 
@@ -316,6 +317,16 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
       toast.error("Preencha todos os campos");
       return;
     }
+    const parsed = appointmentSchema.safeParse({
+      client_name: name,
+      client_phone: onlyDigits(phone),
+      notes: notes || "",
+      date: fmtDate(date),
+      time,
+      service_id: serviceId,
+      professional_id: profId,
+    });
+    if (!parsed.success) return toast.error(parsed.error.errors[0].message);
     setSaving(true);
 
     // Conflict guard
@@ -394,13 +405,14 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
           <Label>{t("appt_client_phone")}</Label>
           <Input
             value={phone}
+            maxLength={20}
             onChange={(e) => setPhone(formatPhone(e.target.value))}
             placeholder="(00) 00000-0000"
           />
         </div>
         <div className="space-y-1.5">
           <Label>{t("appt_client_name")}</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} />
+          <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -453,7 +465,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
         </div>
         <div className="space-y-1.5">
           <Label>{t("appt_obs")}</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <Textarea value={notes} maxLength={500} onChange={(e) => setNotes(e.target.value)} />
         </div>
         <Button
           onClick={submit}

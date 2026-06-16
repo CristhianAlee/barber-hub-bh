@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brl, formatDateBR } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { productSchema } from "@/lib/validationSchemas";
 import { Plus, Search, Loader2, ArrowDown, ArrowUp, Package } from "lucide-react";
 import { toast } from "sonner";
 
@@ -241,6 +242,15 @@ function ProductForm({ onDone }: { onDone: () => void }) {
   const submit = async () => {
     if (!barbershop) return toast.error("Barbearia não encontrada. Recarregue a página.");
     if (!name.trim()) return toast.error("Nome obrigatório");
+    const parsed = productSchema.safeParse({
+      name,
+      price: Number(price) || 0,
+      cost: Number(cost) || 0,
+      stock_quantity: Number(stock) || 0,
+      min_stock_alert: Number(min) || 0,
+      category: category || "",
+    });
+    if (!parsed.success) return toast.error(parsed.error.errors[0].message);
     setSaving(true);
     const { error } = await supabase.from("products").insert({
       barbershop_id: barbershop.id,
@@ -267,9 +277,9 @@ function ProductForm({ onDone }: { onDone: () => void }) {
         <DialogTitle className="font-display text-2xl tracking-wide">{t("stock_new_product_title")}</DialogTitle>
       </DialogHeader>
       <div className="space-y-3">
-        <div className="space-y-1.5"><Label>{t("stock_name")}</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div className="space-y-1.5"><Label>{t("stock_name")}</Label><Input maxLength={100} value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5"><Label>{t("stock_category")}</Label><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Pomada" /></div>
+          <div className="space-y-1.5"><Label>{t("stock_category")}</Label><Input maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Pomada" /></div>
           <div className="space-y-1.5"><Label>{t("stock_initial_stock")}</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -277,7 +287,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
           <div className="space-y-1.5"><Label>{t("stock_sale_price")}</Label><Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>{t("stock_min_alert")}</Label><Input type="number" value={min} onChange={(e) => setMin(e.target.value)} /></div>
         </div>
-        <div className="space-y-1.5"><Label>{t("stock_description")}</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
+        <div className="space-y-1.5"><Label>{t("stock_description")}</Label><Textarea maxLength={200} value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
         <Button onClick={submit} disabled={saving} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
         </Button>
@@ -324,7 +334,7 @@ function MovementForm({ product, onDone }: { product: Product; onDone: () => voi
           </Button>
         </div>
         <div className="space-y-1.5"><Label>{t("stock_quantity")}</Label><Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>{t("stock_reason")}</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={type === "in" ? "Compra, reposição..." : "Uso interno, descarte..."} /></div>
+        <div className="space-y-1.5"><Label>{t("stock_reason")}</Label><Input maxLength={100} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={type === "in" ? "Compra, reposição..." : "Uso interno, descarte..."} /></div>
         <Button onClick={submit} disabled={saving} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("confirm")}
         </Button>
