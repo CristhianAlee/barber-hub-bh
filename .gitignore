@@ -35,3 +35,14 @@ dist-ssr
 .env.local
 .env.*.local
 *.env
+
+# Artefatos acidentais de shell (tokens que viraram
+# nomes de arquivo via redirect)
+{,
+typeof
+Vazamento
+Observação
+text-foreground
+{try{const
+*.tmp
+~*
