@@ -12,6 +12,11 @@ type Barbershop = {
   booking_interval_minutes: number;
   max_advance_days: number;
   onboarded: boolean;
+  subscription_status: string;
+  trial_ends_at: string | null;
+  current_period_ends_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
 };
 
 type AuthCtx = {
@@ -32,7 +37,9 @@ async function fetchBarbershop(userId: string): Promise<Barbershop | null> {
 
     const { data, error } = await supabase
       .from("barbershops")
-      .select("id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days, onboarded")
+      .select(
+        "id, name, slug, phone, address, logo_url, booking_interval_minutes, max_advance_days, onboarded, subscription_status, trial_ends_at, current_period_ends_at, stripe_customer_id, stripe_subscription_id",
+      )
       .eq("owner_id", userId)
       .maybeSingle();
 

@@ -270,7 +270,7 @@ function Landing() {
             {t("landing_hero_sub")}
           </p>
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Link to="/auth/signup">
+            <Link to="/planos">
               <Button size="lg" className="bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold">
                 {t("landing_cta_primary")}
                 <ArrowRight className="ml-2 h-4 w-4" />
@@ -344,7 +344,7 @@ function Landing() {
                 ))}
               </ul>
 
-              <Link to="/auth/signup" className="mt-8 block">
+              <Link to="/planos" className="mt-8 block">
                 <Button
                   size="lg"
                   className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
@@ -353,6 +353,7 @@ function Landing() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
+              <p className="mt-3 text-center text-xs text-muted-foreground">🔒 Pagamento seguro via Stripe</p>
             </div>
           </div>
         </div>

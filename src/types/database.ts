@@ -14,8 +14,22 @@ export interface Database {
           max_advance_days: number;
           onboarded: boolean;
           created_at: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          subscription_status: string;
+          trial_ends_at: string | null;
+          current_period_ends_at: string | null;
         };
-        Insert: Omit<Database["public"]["Tables"]["barbershops"]["Row"], "id" | "created_at">;
+        Insert: Omit<
+          Database["public"]["Tables"]["barbershops"]["Row"],
+          | "id"
+          | "created_at"
+          | "stripe_customer_id"
+          | "stripe_subscription_id"
+          | "subscription_status"
+          | "trial_ends_at"
+          | "current_period_ends_at"
+        >;
         Update: Partial<Database["public"]["Tables"]["barbershops"]["Insert"]>;
         Relationships: [];
       };

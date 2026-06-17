@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { PaywallGuard } from "@/components/shared/PaywallGuard";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/hooks/useLanguage";
@@ -111,7 +112,9 @@ function AppLayout() {
         </header>
 
         <main className="flex-1 overflow-x-hidden">
-          <Outlet />
+          <PaywallGuard>
+            <Outlet />
+          </PaywallGuard>
         </main>
       </div>
     </div>

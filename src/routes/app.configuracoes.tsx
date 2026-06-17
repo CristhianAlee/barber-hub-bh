@@ -17,9 +17,10 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { AlertTriangle, Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
-import { brl, copyToClipboard, formatPhone } from "@/lib/format";
+import { brl, copyToClipboard, formatPhone, formatDateBR } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { barbershopSettingsSchema, professionalSchema, serviceSchema } from "@/lib/validationSchemas";
+import { redirectToCheckout, redirectToPortal } from "@/services/stripeService";
 import { storageService } from "@/services/storageService";
 
 export const Route = createFileRoute("/app/configuracoes")({
@@ -612,6 +613,88 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
   );
 }
 
+function SubscriptionCard() {
+  const { barbershop } = useAuth();
+  const [busy, setBusy] = useState(false);
+  if (!barbershop) return null;
+
+  const status = barbershop.subscription_status ?? "trial";
+  const trialEnds = barbershop.trial_ends_at ? new Date(barbershop.trial_ends_at) : null;
+  const daysLeft = trialEnds
+    ? Math.max(0, Math.ceil((trialEnds.getTime() - Date.now()) / 86_400_000))
+    : 0;
+  const periodEnds = barbershop.current_period_ends_at
+    ? new Date(barbershop.current_period_ends_at)
+    : null;
+
+  const badges: Record<string, { label: string; cls: string }> = {
+    trial: { label: "Trial", cls: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
+    active: { label: "Ativo", cls: "bg-success/15 text-success border-success/30" },
+    past_due: { label: "Pagamento pendente", cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    canceled: { label: "Cancelado", cls: "bg-muted text-muted-foreground border-border" },
+    incomplete: { label: "Incompleto", cls: "bg-muted text-muted-foreground border-border" },
+  };
+  const b = badges[status] ?? badges.trial;
+
+  const usesPortal = status === "active" || status === "past_due";
+  const ctaLabel =
+    status === "active" ? "Gerenciar assinatura"
+      : status === "past_due" ? "Atualizar pagamento"
+        : status === "canceled" ? "Reativar"
+          : "Assinar agora";
+
+  const onClick = async () => {
+    setBusy(true);
+    try {
+      await (usesPortal ? redirectToPortal() : redirectToCheckout());
+    } catch (err) {
+      setBusy(false);
+      toast.error(err instanceof Error ? err.message : "Tente novamente.");
+    }
+  };
+
+  return (
+    <Card className="border-gold/30 bg-card p-5">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">Assinatura</h3>
+        <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${b.cls}`}>{b.label}</span>
+      </div>
+
+      {status === "trial" && (
+        <div className="mt-3">
+          <p className="text-sm text-muted-foreground">
+            Trial ativo — expira em{" "}
+            <span className="font-semibold text-foreground">{daysLeft} {daysLeft === 1 ? "dia" : "dias"}</span>
+          </p>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full bg-gradient-gold" style={{ width: `${Math.min(100, (daysLeft / 7) * 100)}%` }} />
+          </div>
+        </div>
+      )}
+      {status === "active" && (
+        <p className="mt-3 text-sm text-muted-foreground">
+          BarberHub Pro — <span className="font-semibold text-foreground">R$ 69,99/mês</span>
+          {periodEnds && <> · Próxima cobrança: {formatDateBR(periodEnds.toISOString().slice(0, 10))}</>}
+        </p>
+      )}
+      {status === "past_due" && (
+        <p className="mt-3 text-sm text-destructive">Pagamento pendente — atualize sua forma de pagamento.</p>
+      )}
+      {status === "canceled" && (
+        <p className="mt-3 text-sm text-muted-foreground">Sua assinatura foi cancelada.</p>
+      )}
+
+      <Button
+        onClick={onClick}
+        disabled={busy}
+        className="mt-4 bg-gradient-gold text-gold-foreground hover:opacity-90"
+      >
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : ctaLabel}
+      </Button>
+    </Card>
+  );
+}
+
 function ContaTab() {
   const { user, barbershop } = useAuth();
   const [open, setOpen] = useState(false);
@@ -652,6 +735,8 @@ function ContaTab() {
           </div>
         </div>
       </Card>
+
+      <SubscriptionCard />
 
       <Card className="border-destructive/30 bg-card p-5">
         <h3 className="mb-1 font-semibold text-destructive">Zona de perigo</h3>

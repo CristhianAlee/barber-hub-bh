@@ -38,8 +38,21 @@ const fmtD = (d: Date) => {
 };
 
 function Dashboard() {
-  const { barbershop } = useAuth();
+  const { barbershop, refreshBarbershop } = useAuth();
   const { t } = useLanguage();
+
+  // Pós-checkout: confirma a ativação e atualiza os dados da barbearia.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") === "success") {
+      toast.success("🎉 Assinatura ativada! Bem-vindo ao BarberHub Pro!");
+      params.delete("checkout");
+      const qs = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+      refreshBarbershop();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [stats, setStats] = useState<Stats>({
     todayRevenue: 0, todayAppointments: 0, newClientsMonth: 0, lowStock: 0,
   });
