@@ -46,3 +46,6 @@ text-foreground
 {try{const
 *.tmp
 ~*
+
+# MCP local com secret (Stripe etc.) — nunca commitar
+.mcp.json
