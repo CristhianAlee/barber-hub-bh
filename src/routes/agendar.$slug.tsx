@@ -1,6 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { supabase, supabasePublic } from "@/lib/supabase";
+import { supabasePublic } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,11 +98,11 @@ function PublicBooking() {
         if (!b) { setLoading(false); return; }
         setBs(b);
         const [s, p, h, ph, ps] = await Promise.all([
-          supabase.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
+          supabasePublic.from("services").select("id, name, price, duration_minutes").eq("barbershop_id", b.id).eq("active", true).order("price"),
           supabasePublic.from("public_professionals").select("id, name").eq("barbershop_id", b.id),
-          supabase.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
-          supabase.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
-          supabase.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
+          supabasePublic.from("business_hours").select("day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabasePublic.from("professional_business_hours").select("professional_id, day_of_week, open_time, close_time, is_closed").eq("barbershop_id", b.id),
+          supabasePublic.from("professional_services").select("professional_id, service_id").eq("barbershop_id", b.id),
         ]);
         setServices(s.data ?? []);
         setProfs(p.data ?? []);
@@ -241,9 +241,10 @@ function PublicBooking() {
     const phoneDigits = onlyDigits(phone);
     const clientId = safeUuid();
 
-    const { error: clientError } = await supabase
+    const clientPayload = { id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null };
+    const { error: clientError } = await supabasePublic
       .from("clients")
-      .insert({ id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null });
+      .insert(clientPayload);
     if (clientError) {
       setSubmitting(false);
       console.error("[agendar.submit] cliente", clientError);
@@ -260,7 +261,7 @@ function PublicBooking() {
       status: "pending" as const,
       notes: notes || null,
     };
-    const { error } = await supabase.from("appointments").insert(apptPayload);
+    const { error } = await supabasePublic.from("appointments").insert(apptPayload);
     if (error) {
       setSubmitting(false);
       console.error("[agendar.submit] agendamento", error);
