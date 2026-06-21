@@ -7,6 +7,8 @@ import { brl, copyToClipboard } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkout } from "@/components/Checkout";
 import {
   CalendarDays, DollarSign, Scissors, AlertTriangle,
   UserPlus, ExternalLink, Copy, Package, Users,
@@ -60,6 +62,39 @@ function Dashboard() {
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [inactiveCount, setInactiveCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [pendingPast, setPendingPast] = useState<any[]>([]);
+  const [checkout, setCheckout] = useState<any>(null);
+
+  const loadPending = async () => {
+    if (!barbershop) return;
+    const today = fmtD(new Date());
+    const { data } = await supabase
+      .from("appointments")
+      .select("id, date, time, status, barbershop_id, client_id, professional_id, service_id, clients(name), services(name, price), professionals(name)")
+      .eq("barbershop_id", barbershop.id)
+      .in("status", ["pending", "confirmed"])
+      .lt("date", today)
+      .order("date")
+      .order("time");
+    setPendingPast(data ?? []);
+  };
+
+  useEffect(() => {
+    loadPending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barbershop]);
+
+  // Faltou / Cancelar direto da pendência. "Concluir" abre o Checkout (setCheckout).
+  const pendingAction = async (a: any, status: "no_show" | "cancelled") => {
+    const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
+    if (error) return toast.error("Não foi possível atualizar. Tente novamente.");
+    if (status === "no_show" && a.client_id) {
+      const { data: c } = await supabase.from("clients").select("no_show_count").eq("id", a.client_id).maybeSingle();
+      await supabase.from("clients").update({ no_show_count: (c?.no_show_count ?? 0) + 1 }).eq("id", a.client_id);
+    }
+    toast.success(status === "no_show" ? "Marcado como falta" : "Agendamento cancelado");
+    loadPending();
+  };
 
   useEffect(() => {
     if (!barbershop) return;
@@ -131,6 +166,7 @@ function Dashboard() {
     confirmed: { label: () => t("appt_status_confirmed"), cls: "bg-gold/15 text-gold border-gold/30" },
     completed: { label: () => t("appt_status_completed"), cls: "bg-success/15 text-success border-success/30" },
     cancelled: { label: () => t("appt_status_cancelled"), cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    no_show: { label: () => "Não compareceu", cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
   };
 
   return (
@@ -196,6 +232,46 @@ function Dashboard() {
                   </div>
                 </div>
               </div>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* Pendências passadas */}
+      {pendingPast.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
+            <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+              {pendingPast.length} agendamento{pendingPast.length > 1 ? "s" : ""} passado{pendingPast.length > 1 ? "s" : ""} sem confirmação
+            </div>
+          </div>
+          <div className="mt-3 space-y-2">
+            {pendingPast.slice(0, 5).map((a) => (
+              <div key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-background/40 p-2.5 text-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium">{a.clients?.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {a.services?.name} • {new Date(a.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} {a.time?.slice(0, 5)}
+                  </div>
+                </div>
+                <div className="flex gap-1.5">
+                  <Button size="sm" className="h-7 bg-success text-success-foreground hover:opacity-90" onClick={() => setCheckout(a)}>
+                    Concluir
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 border-amber-500/40 text-amber-500 hover:bg-amber-500/10" onClick={() => pendingAction(a, "no_show")}>
+                    Faltou
+                  </Button>
+                  <Button size="sm" variant="outline" className="h-7 border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => pendingAction(a, "cancelled")}>
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          {pendingPast.length > 5 && (
+            <Link to="/app/agendamentos" className="mt-3 inline-block text-xs font-medium text-amber-600 hover:underline dark:text-amber-400">
+              + ver todos ({pendingPast.length})
             </Link>
           )}
         </div>
@@ -312,6 +388,15 @@ function Dashboard() {
           </Button>
         </Card>
       </div>
+
+      <Dialog open={!!checkout} onOpenChange={(o) => !o && setCheckout(null)}>
+        <DialogContent className="bg-card max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl tracking-wide">{t("checkout_title")}</DialogTitle>
+          </DialogHeader>
+          {checkout && <Checkout appointment={checkout} onDone={() => { setCheckout(null); loadPending(); }} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

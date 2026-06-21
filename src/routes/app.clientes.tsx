@@ -28,6 +28,7 @@ type Client = {
   total_spent: number;
   last_visit: string | null;
   notes: string | null;
+  no_show_count: number | null;
   created_at: string;
 };
 
@@ -56,7 +57,7 @@ function ClientesPage() {
     const since = new Date(Date.now() - DAYS_INACTIVE * 86400000).toISOString().slice(0, 10);
     const today = new Date().toISOString().slice(0, 10);
     const [c, recent] = await Promise.all([
-      supabase.from("clients").select("id, name, phone, email, total_visits, total_spent, last_visit, notes, created_at").eq("barbershop_id", barbershop.id).order("name"),
+      supabase.from("clients").select("id, name, phone, email, total_visits, total_spent, last_visit, notes, no_show_count, created_at").eq("barbershop_id", barbershop.id).order("name"),
       supabase.from("appointments").select("client_id, date, status").eq("barbershop_id", barbershop.id).in("status", ["pending", "confirmed", "completed"]).gte("date", since),
     ]);
     setClients((c.data as Client[]) ?? []);
@@ -282,6 +283,12 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
           </div>
         </Card>
       </div>
+
+      {Number(client.no_show_count) > 0 && (
+        <p className="text-xs text-amber-500">
+          ⚠️ {client.no_show_count} falta{Number(client.no_show_count) > 1 ? "s" : ""} registrada{Number(client.no_show_count) > 1 ? "s" : ""}
+        </p>
+      )}
 
       <div className="space-y-1 text-sm">
         <div><span className="text-muted-foreground">Telefone:</span> {formatPhone(client.phone)}</div>

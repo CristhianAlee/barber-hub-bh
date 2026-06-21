@@ -105,13 +105,14 @@ export interface Database {
           last_visit: string | null;
           total_visits: number;
           total_spent: number;
+          no_show_count: number;
           created_at: string;
         };
         Insert: Omit<
           Database["public"]["Tables"]["clients"]["Row"],
-          "id" | "created_at" | "total_visits" | "total_spent"
+          "id" | "created_at" | "total_visits" | "total_spent" | "no_show_count"
         >;
-        Update: Partial<Database["public"]["Tables"]["clients"]["Insert"]>;
+        Update: Partial<Omit<Database["public"]["Tables"]["clients"]["Row"], "id" | "created_at">>;
         Relationships: [];
       };
       appointments: {
@@ -124,7 +125,7 @@ export interface Database {
           date: string;
           time: string;
           duration_minutes: number;
-          status: "pending" | "confirmed" | "completed" | "cancelled";
+          status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show";
           notes: string | null;
           created_at: string;
         };

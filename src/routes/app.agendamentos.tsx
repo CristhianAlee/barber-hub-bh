@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock, UserX, AlertTriangle } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { appointmentSchema } from "@/lib/validationSchemas";
@@ -40,6 +40,8 @@ function addDays(d: Date, n: number) {
   return x;
 }
 const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
+const APPT_SELECT =
+  "id, date, time, status, notes, duration_minutes, barbershop_id, professional_id, client_id, service_id, clients(name, phone), services(name, price, duration_minutes), professionals(name)";
 const dayLabel = (d: Date) =>
   new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
 
@@ -48,23 +50,29 @@ function AgendamentosPage() {
   const { t } = useLanguage();
   const [date, setDate] = useState<Date>(new Date());
   const [appts, setAppts] = useState<any[]>([]);
+  const [pending, setPending] = useState<any[]>([]);
+  const [showPending, setShowPending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [checkout, setCheckout] = useState<any>(null);
   const [reschedule, setReschedule] = useState<any>(null);
+  const [noShow, setNoShow] = useState<any>(null);
+
+  const today = fmtDate(new Date());
 
   const load = async () => {
     if (!barbershop) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("appointments")
-      .select(
-        "id, time, status, notes, duration_minutes, professional_id, client_id, service_id, clients(name, phone), services(name, price, duration_minutes), professionals(name)"
-      )
-      .eq("barbershop_id", barbershop.id)
-      .eq("date", fmtDate(date))
-      .order("time");
-    setAppts(data ?? []);
+    const [dayRes, pendRes] = await Promise.all([
+      supabase.from("appointments").select(APPT_SELECT)
+        .eq("barbershop_id", barbershop.id).eq("date", fmtDate(date)).order("time"),
+      // Pendências: passadas e ainda sem desfecho (mais antigas primeiro).
+      supabase.from("appointments").select(APPT_SELECT)
+        .eq("barbershop_id", barbershop.id).in("status", ["pending", "confirmed"]).lt("date", today)
+        .order("date").order("time"),
+    ]);
+    setAppts(dayRes.data ?? []);
+    setPending(pendRes.data ?? []);
     setLoading(false);
   };
 
@@ -73,10 +81,25 @@ function AgendamentosPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, barbershop]);
 
-  const updateStatus = async (id: string, status: "pending" | "confirmed" | "completed" | "cancelled") => {
+  const updateStatus = async (id: string, status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show") => {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) return toast.error("Erro ao atualizar");
     toast.success("Status atualizado");
+    load();
+  };
+
+  // Marca falta: status no_show + incrementa no_show_count. NÃO mexe no financeiro/estoque/visitas.
+  const confirmNoShow = async () => {
+    const a = noShow;
+    if (!a) return;
+    setNoShow(null);
+    const { error } = await supabase.from("appointments").update({ status: "no_show" }).eq("id", a.id);
+    if (error) return toast.error(getFriendlyErrorMessage(error, "marcar falta"));
+    if (a.client_id) {
+      const { data: c } = await supabase.from("clients").select("no_show_count").eq("id", a.client_id).maybeSingle();
+      await supabase.from("clients").update({ no_show_count: (c?.no_show_count ?? 0) + 1 }).eq("id", a.client_id);
+    }
+    toast.success("Marcado como falta");
     load();
   };
 
@@ -97,6 +120,20 @@ function AgendamentosPage() {
           <Button variant="outline" size="icon" onClick={() => setDate(addDays(date, 1))}>
             <ChevronRight className="h-4 w-4" />
           </Button>
+          <Button
+            variant={showPending ? "default" : "outline"}
+            onClick={() => setShowPending((v) => !v)}
+            className={
+              showPending
+                ? "bg-amber-500 text-white hover:bg-amber-600"
+                : pending.length > 0
+                ? "border-amber-500/50 text-amber-500 hover:bg-amber-500/10"
+                : ""
+            }
+          >
+            <AlertTriangle className="mr-1 h-4 w-4" />
+            Pendências{pending.length > 0 ? ` (${pending.length})` : ""}
+          </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button className="bg-gradient-gold text-gold-foreground hover:opacity-90">
@@ -116,6 +153,13 @@ function AgendamentosPage() {
         </div>
       </div>
 
+      {showPending && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Mostrando agendamentos passados sem desfecho (mais antigos primeiro). Conclua, marque falta ou cancele.
+        </div>
+      )}
+
       <Card className="border-border bg-card p-4 md:p-6">
         {loading ? (
           <div className="space-y-2">
@@ -123,14 +167,22 @@ function AgendamentosPage() {
               <div key={i} className="h-16 animate-pulse rounded-lg bg-muted/30" />
             ))}
           </div>
-        ) : appts.length === 0 ? (
+        ) : (showPending ? pending : appts).length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
-            {t("appt_empty")}
+            {showPending ? "Nenhuma pendência — tudo em dia! 🎉" : t("appt_empty")}
           </div>
         ) : (
           <div className="space-y-2">
-            {appts.map((a) => (
-              <ApptRow key={a.id} a={a} onAction={updateStatus} onCheckout={() => setCheckout(a)} onReschedule={() => setReschedule(a)} />
+            {(showPending ? pending : appts).map((a) => (
+              <ApptRow
+                key={a.id}
+                a={a}
+                showDate={showPending}
+                onAction={updateStatus}
+                onCheckout={() => setCheckout(a)}
+                onReschedule={() => setReschedule(a)}
+                onNoShow={() => setNoShow(a)}
+              />
             ))}
           </div>
         )}
@@ -157,22 +209,48 @@ function AgendamentosPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!noShow} onOpenChange={(o) => !o && setNoShow(null)}>
+        <DialogContent className="bg-card">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-500">
+              <UserX className="h-5 w-5" /> Cliente faltou
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Confirmar que <span className="font-medium text-foreground">{noShow?.clients?.name ?? "o cliente"}</span> não
+            compareceu? Isso <span className="font-medium">não afeta o financeiro</span> — apenas registra a falta.
+          </p>
+          <div className="mt-2 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setNoShow(null)}>Voltar</Button>
+            <Button className="bg-amber-500 text-white hover:bg-amber-600" onClick={confirmNoShow}>
+              Marcar falta
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
+function ApptRow({ a, onAction, onCheckout, onReschedule, onNoShow, showDate }: any) {
   const { t } = useLanguage();
   const statusMap: Record<string, { label: string; cls: string }> = {
     pending: { label: t("appt_status_pending"), cls: "bg-muted text-muted-foreground border-border" },
     confirmed: { label: t("appt_status_confirmed"), cls: "bg-gold/15 text-gold border-gold/30" },
     completed: { label: t("appt_status_completed"), cls: "bg-success/15 text-success border-success/30" },
     cancelled: { label: t("appt_status_cancelled"), cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    no_show: { label: "Não compareceu", cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
   };
   const m = statusMap[a.status] ?? statusMap.pending;
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 p-3">
-      <div className="rounded-md bg-gold/10 px-3 py-2 font-mono text-base text-gold">
+      <div className="rounded-md bg-gold/10 px-3 py-2 text-center font-mono text-base text-gold">
+        {showDate && a.date && (
+          <div className="text-[10px] leading-none text-gold/70">
+            {new Date(a.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+          </div>
+        )}
         {a.time?.slice(0, 5)}
       </div>
       <div className="min-w-0 flex-1">
@@ -200,12 +278,22 @@ function ApptRow({ a, onAction, onCheckout, onReschedule }: any) {
             <CheckCircle2 className="mr-1 h-3 w-3" /> {t("appt_complete")}
           </Button>
         )}
-        {a.status !== "cancelled" && a.status !== "completed" && (
+        {(a.status === "pending" || a.status === "confirmed") && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10"
+            onClick={onNoShow}
+          >
+            <UserX className="mr-1 h-3 w-3" /> Faltou
+          </Button>
+        )}
+        {a.status !== "cancelled" && a.status !== "completed" && a.status !== "no_show" && (
           <Button size="sm" variant="outline" onClick={onReschedule}>
             <CalendarClock className="mr-1 h-3 w-3" /> {t("appt_reschedule")}
           </Button>
         )}
-        {a.status !== "cancelled" && a.status !== "completed" && (
+        {a.status !== "cancelled" && a.status !== "completed" && a.status !== "no_show" && (
           <Button
             size="sm"
             variant="outline"
