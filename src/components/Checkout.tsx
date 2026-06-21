@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -25,6 +26,10 @@ type Service = { id: string; name: string; price: number };
 type Product = { id: string; name: string; price: number; stock_quantity: number };
 
 export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: () => void }) {
+  // Fonte autoritativa do barbershop_id: a barbearia do barbeiro logado
+  // (por RLS é sempre a dona do agendamento). Não dependemos da prop, que
+  // pode vir sem barbershop_id dependendo da query do componente pai.
+  const { barbershop } = useAuth();
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [extraServices, setExtraServices] = useState<Set<string>>(new Set());
@@ -34,16 +39,17 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!barbershop) return;
     (async () => {
       const [s, p] = await Promise.all([
-        supabase.from("services").select("id, name, price").eq("barbershop_id", appointment.barbershop_id).eq("active", true),
-        supabase.from("products").select("id, name, price, stock_quantity").eq("barbershop_id", appointment.barbershop_id).eq("active", true).gt("stock_quantity", 0).limit(3),
+        supabase.from("services").select("id, name, price").eq("barbershop_id", barbershop.id).eq("active", true),
+        supabase.from("products").select("id, name, price, stock_quantity").eq("barbershop_id", barbershop.id).eq("active", true).gt("stock_quantity", 0).limit(3),
       ]);
       setServices((s.data ?? []).filter((x: any) => x.id !== appointment.service_id));
       setProducts((p.data as Product[]) ?? []);
       setLoading(false);
     })();
-  }, [appointment.barbershop_id, appointment.service_id]);
+  }, [barbershop?.id, appointment.service_id]);
 
   const baseService = appointment.services;
   const total = useMemo(() => {
@@ -57,13 +63,17 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
   }, [baseService, services, extraServices, products, orderbumpProducts]);
 
   const finalize = async () => {
+    if (!barbershop) {
+      toast.error("Não foi possível identificar a barbearia. Recarregue a página.");
+      return;
+    }
     setSubmitting(true);
     try {
       // 1. Create sale
       const { data: sale, error: saleErr } = await supabase
         .from("sales")
         .insert({
-          barbershop_id: appointment.barbershop_id,
+          barbershop_id: barbershop.id,
           client_id: appointment.client_id,
           professional_id: appointment.professional_id,
           appointment_id: appointment.id,
@@ -100,7 +110,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
 
       // 3. Financial entry
       const { error: finErr } = await supabase.from("financial_entries").insert({
-        barbershop_id: appointment.barbershop_id,
+        barbershop_id: barbershop.id,
         type: "income",
         category: "Atendimento",
         description: `${appointment.clients?.name ?? "Cliente"} — ${baseService?.name ?? ""}`,
