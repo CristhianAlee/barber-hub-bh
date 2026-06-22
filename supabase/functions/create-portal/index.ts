@@ -1,6 +1,6 @@
 // supabase/functions/create-portal/index.ts
 // Cria uma Stripe Billing Portal Session para a barbearia do usuário.
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import Stripe from "https://esm.sh/stripe@17?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 

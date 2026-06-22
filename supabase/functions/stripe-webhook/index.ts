@@ -1,7 +1,7 @@
 // supabase/functions/stripe-webhook/index.ts
 // Recebe eventos do Stripe. Valida a assinatura ANTES de qualquer ação.
 // Deploy com --no-verify-jwt (Stripe não envia JWT do Supabase).
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import Stripe from "https://esm.sh/stripe@17?target=deno";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
