@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
+import { supabase } from "@/lib/supabase";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { loginSchema } from "@/lib/validationSchemas";
 import { useFormValidation } from "@/hooks/useFormValidation";
@@ -24,6 +25,19 @@ function Login() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const { errors, validate, clearError } = useFormValidation(loginSchema);
   const [loginError, setLoginError] = useState("");
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  const handleResendConfirmation = async () => {
+    setResending(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setResending(false);
+    if (error) {
+      toast.error("Não foi possível reenviar o e-mail. Tente novamente.");
+      return;
+    }
+    toast.success("E-mail reenviado! Verifique sua caixa de entrada.");
+  };
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -37,12 +51,16 @@ function Login() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
+    setNeedsConfirmation(false);
     if (!validate({ email, password })) return;
     setLoading(true);
     const { error } = await authService.signIn(email, password);
     setLoading(false);
     if (error) {
       console.error("[Login] signIn:", error);
+      if (error.includes("Email not confirmed")) {
+        setNeedsConfirmation(true);
+      }
       const msg = error.includes("Invalid") ? "E-mail ou senha incorretos" : getFriendlyErrorMessage(error, "fazer login");
       setLoginError(msg);
       toast.error(msg);
@@ -69,7 +87,7 @@ function Login() {
               autoComplete="email"
               maxLength={254}
               value={email}
-              onChange={(e) => { setEmail(e.target.value); clearError("email"); setLoginError(""); }}
+              onChange={(e) => { setEmail(e.target.value); clearError("email"); setLoginError(""); setNeedsConfirmation(false); }}
               className="pl-9"
               placeholder="voce@barbearia.com"
             />
@@ -103,6 +121,17 @@ function Login() {
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-center text-sm text-destructive">
             {loginError}
           </p>
+        )}
+        {needsConfirmation && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={resending}
+            onClick={handleResendConfirmation}
+          >
+            {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reenviar e-mail de confirmação"}
+          </Button>
         )}
         <Button
           type="submit"

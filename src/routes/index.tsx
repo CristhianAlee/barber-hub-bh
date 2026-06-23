@@ -15,6 +15,8 @@ import {
   Check,
   ChevronDown,
   Mail,
+  Menu,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
@@ -172,6 +174,7 @@ const PRICING_PRICE = "R$ 69,99";
 
 function Landing() {
   const { t } = useLanguage();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const features = [
     {
@@ -234,20 +237,66 @@ function Landing() {
               BARBER<span className="text-gold">HUB</span>
             </span>
           </Link>
-          <nav className="flex items-center gap-2">
+
+          {/* Desktop nav */}
+          <nav className="hidden items-center gap-2 md:flex">
             <LangToggle />
             <ThemeToggle size="sm" />
             <Link to="/auth/login">
               <Button variant="ghost" size="sm">{t("landing_header_signin")}</Button>
             </Link>
-            <Link to="/auth/signup">
+            <Link to="/planos">
               <Button size="sm" className="bg-gradient-gold text-gold-foreground hover:opacity-90">
                 {t("landing_header_start")}
               </Button>
             </Link>
           </nav>
+
+          {/* Mobile hamburger */}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+            aria-expanded={menuOpen}
+            className="flex items-center justify-center rounded-lg border border-border p-2 text-foreground transition hover:bg-muted/30 md:hidden"
+          >
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+        </div>
+
+        {/* Mobile drawer */}
+        <div
+          className={`overflow-hidden border-border bg-background/95 backdrop-blur transition-all duration-300 ease-in-out md:hidden ${
+            menuOpen ? "max-h-80 border-t opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <LangToggle />
+              <ThemeToggle size="sm" />
+            </div>
+            <Link to="/auth/login" onClick={() => setMenuOpen(false)}>
+              <Button variant="ghost" className="w-full justify-start">
+                {t("landing_header_signin")}
+              </Button>
+            </Link>
+            <Link to="/planos" onClick={() => setMenuOpen(false)}>
+              <Button className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
+                {t("landing_header_start")}
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
+
+      {/* Backdrop: fecha o menu ao clicar fora */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          aria-hidden
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
 
       {/* ── Hero */}
       <section className="relative overflow-hidden">

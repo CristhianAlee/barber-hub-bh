@@ -32,7 +32,8 @@ function Signup() {
   });
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { validate } = useFormValidation(signupSchema);
+  const [triedSubmit, setTriedSubmit] = useState(false);
+  const { errors, validate, clearError } = useFormValidation(signupSchema);
 
   const handleGoogleAuth = async () => {
     setGoogleLoading(true);
@@ -45,19 +46,29 @@ function Signup() {
 
   const ps = passwordStrength(form.password);
   const phoneDigits = onlyDigits(form.phone);
-  const valid =
-    form.name.trim().length >= 2 &&
-    form.barbershop.trim().length >= 2 &&
-    phoneDigits.length >= 10 &&
-    /\S+@\S+\.\S+/.test(form.email) &&
-    form.password.length >= 8 &&
-    form.password === form.confirm &&
-    form.terms;
+
+  // "Confirmar senha" não faz parte do signupSchema — validado à parte.
+  const confirmError =
+    form.confirm.length === 0
+      ? triedSubmit
+        ? "Confirme sua senha"
+        : ""
+      : form.confirm !== form.password
+      ? "As senhas não coincidem"
+      : "";
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!valid) return;
-    if (!validate({ name: form.name, email: form.email, password: form.password, barbershop_name: form.barbershop, phone: phoneDigits })) return;
+    setTriedSubmit(true);
+    const schemaOk = validate({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      barbershop_name: form.barbershop,
+      phone: phoneDigits,
+    });
+    const confirmOk = form.confirm.length > 0 && form.confirm === form.password;
+    if (!schemaOk || !confirmOk || !form.terms) return;
     setLoading(true);
     const { error } = await authService.signUp(form.email, form.password, {
       fullName: form.name,
@@ -93,11 +104,13 @@ function Signup() {
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="name">{t("name")}</Label>
-          <Input id="name" maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+          <Input id="name" maxLength={100} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); clearError("name"); }} required />
+          {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="bs">{t("auth_bname")}</Label>
-          <Input id="bs" maxLength={100} value={form.barbershop} onChange={(e) => setForm({ ...form, barbershop: e.target.value })} required />
+          <Input id="bs" maxLength={100} value={form.barbershop} onChange={(e) => { setForm({ ...form, barbershop: e.target.value }); clearError("barbershop_name"); }} required />
+          {errors.barbershop_name && <p className="text-xs text-destructive">{errors.barbershop_name}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="phone">{t("phone")}</Label>
@@ -106,14 +119,16 @@ function Signup() {
             inputMode="tel"
             maxLength={20}
             value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: formatPhone(e.target.value) })}
+            onChange={(e) => { setForm({ ...form, phone: formatPhone(e.target.value) }); clearError("phone"); }}
             placeholder="(00) 00000-0000"
             required
           />
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="email">{t("auth_email")}</Label>
-          <Input id="email" type="email" maxLength={254} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+          <Input id="email" type="email" maxLength={254} value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); clearError("email"); }} required />
+          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="pw">{t("auth_password")}</Label>
@@ -122,7 +137,7 @@ function Signup() {
             type="password"
             maxLength={128}
             value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            onChange={(e) => { setForm({ ...form, password: e.target.value }); clearError("password"); }}
             required
             minLength={8}
             placeholder="Mínimo 8 caracteres"
@@ -148,6 +163,7 @@ function Signup() {
               <span className="text-xs text-muted-foreground">{ps.label}</span>
             </div>
           )}
+          {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm">Confirmar senha</Label>
@@ -159,8 +175,8 @@ function Signup() {
             onChange={(e) => setForm({ ...form, confirm: e.target.value })}
             required
           />
-          {form.confirm && form.confirm !== form.password && (
-            <p className="text-xs text-destructive">As senhas não coincidem</p>
+          {confirmError && (
+            <p className="text-xs text-destructive">{confirmError}</p>
           )}
         </div>
         <label className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -181,7 +197,7 @@ function Signup() {
             do BarberHub. <span className="text-destructive">*</span>
           </span>
         </label>
-        {!form.terms && form.name && (
+        {triedSubmit && !form.terms && (
           <p className="text-xs text-destructive">Você precisa aceitar os termos para criar uma conta</p>
         )}
         <label className="flex items-start gap-2 text-sm text-muted-foreground">
@@ -198,7 +214,7 @@ function Signup() {
 
         <Button
           type="submit"
-          disabled={!valid || loading}
+          disabled={loading}
           className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("auth_signup_btn")}

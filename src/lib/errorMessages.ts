@@ -30,6 +30,9 @@ export function getFriendlyErrorMessage(err: unknown, context?: string): string 
   if (message.includes("appointments_no_double_booking")) {
     return "Este horário já está ocupado. Escolha outro horário.";
   }
+  if (message.includes("Email not confirmed")) {
+    return "Confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.";
+  }
   if (message.includes("JWT") || message.includes("token")) {
     return "Sessão expirada. Faça login novamente.";
   }
