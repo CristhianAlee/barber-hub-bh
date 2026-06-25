@@ -78,8 +78,9 @@ function ClientesPage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     if (!q) return clients;
+    const digits = onlyDigits(q);
     return clients.filter(
-      (c) => c.name.toLowerCase().includes(q) || c.phone.includes(onlyDigits(q))
+      (c) => c.name.toLowerCase().includes(q) || (digits !== "" && c.phone.includes(digits))
     );
   }, [clients, search]);
 

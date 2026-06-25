@@ -16,7 +16,7 @@ function RootComponent() {
       <LanguageProvider>
         <AuthProvider>
           <Outlet />
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="top-right" duration={4000} />
           <CookieBanner />
         </AuthProvider>
       </LanguageProvider>

@@ -81,7 +81,10 @@ function EstoquePage() {
     const q = search.toLowerCase().trim();
     return products.filter((p) => {
       if (category !== "all" && p.category !== category) return false;
-      if (q && !p.name.toLowerCase().includes(q)) return false;
+      if (q) {
+        const haystack = `${p.name} ${p.category ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
   }, [products, search, category]);
