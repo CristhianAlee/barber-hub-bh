@@ -265,6 +265,12 @@ export interface Database {
           duration_minutes: number;
         }[];
       };
+      // Assinatura ativa do dono (SECURITY DEFINER) — usada no RLS das
+      // 11 tabelas do painel para enforcement de paywall server-side.
+      has_active_subscription: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
     };
   };
 }
