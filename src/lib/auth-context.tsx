@@ -77,17 +77,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, s) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       if (!mounted) return;
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
-        const bs = await fetchBarbershop(s.user.id);
-        if (mounted) setBarbershop(bs);
+        // IMPORTANTE: o callback do onAuthStateChange roda sob um lock interno
+        // de auth do supabase-js. Fazer await de uma query aqui dentro
+        // (fetchBarbershop precisa do token) deadlocka até o lock expirar —
+        // é a causa do "loading longo" após o OAuth do Google, que o F5 resolve.
+        // Deferimos com setTimeout(0) para sair do lock antes de consultar.
+        const uid = s.user.id;
+        setTimeout(async () => {
+          if (!mounted) return;
+          const bs = await fetchBarbershop(uid);
+          if (mounted) {
+            setBarbershop(bs);
+            setLoading(false);
+          }
+        }, 0);
       } else {
         setBarbershop(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
