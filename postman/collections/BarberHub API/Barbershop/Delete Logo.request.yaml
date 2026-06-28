@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete Logo
+method: DELETE
+url: '{{SUPABASE_URL}}/storage/v1/object/logos/{{barbershopId}}/logo.jpg'
+order: 4000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

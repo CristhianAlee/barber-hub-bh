@@ -1,0 +1,21 @@
+$kind: http-request
+name: Update Financial Entry
+method: PATCH
+url: '{{baseUrl}}/financial_entries?id=eq.{{entryId}}'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "amount": 40.00,
+      "description": "Corte + barba"
+    }

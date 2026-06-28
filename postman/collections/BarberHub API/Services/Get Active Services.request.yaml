@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Active Services
+method: GET
+url: '{{baseUrl}}/services?select=*&barbershop_id=eq.{{barbershopId}}&active=eq.true&order=name'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

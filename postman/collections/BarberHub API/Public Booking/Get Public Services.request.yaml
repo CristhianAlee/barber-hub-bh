@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Public Services
+method: GET
+url: '{{baseUrl}}/services?select=id,name,price,duration_minutes&barbershop_id=eq.{{barbershopId}}&active=eq.true&order=price'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'

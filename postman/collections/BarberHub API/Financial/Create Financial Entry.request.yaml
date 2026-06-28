@@ -1,0 +1,27 @@
+$kind: http-request
+name: Create Financial Entry
+method: POST
+url: '{{baseUrl}}/financial_entries'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "barbershop_id": "{{barbershopId}}",
+      "type": "income",
+      "category": "Serviço",
+      "description": "Corte de cabelo",
+      "amount": 35.00,
+      "date": "2026-07-01",
+      "payment_method": "pix",
+      "notes": null
+    }

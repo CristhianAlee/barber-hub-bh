@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Barbershop by Slug
+method: GET
+url: '{{baseUrl}}/public_barbershops?select=id,name,slug,phone,address,logo_url,booking_interval_minutes,max_advance_days&slug=eq.{{slug}}'
+order: 1000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'

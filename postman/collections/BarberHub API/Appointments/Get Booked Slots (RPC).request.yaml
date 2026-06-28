@@ -1,0 +1,19 @@
+$kind: http-request
+name: 'Get Booked Slots (RPC)'
+method: POST
+url: '{{baseUrl}}/rpc/get_booked_slots'
+order: 5000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "p_barbershop_id": "{{barbershopId}}",
+      "p_date": "2026-07-01"
+    }

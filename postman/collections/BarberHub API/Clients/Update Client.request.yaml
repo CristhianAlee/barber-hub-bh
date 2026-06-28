@@ -1,0 +1,23 @@
+$kind: http-request
+name: Update Client
+method: PATCH
+url: '{{baseUrl}}/clients?id=eq.{{clientId}}'
+order: 5000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "name": "João Silva",
+      "phone": "11999999999",
+      "email": "joao@example.com",
+      "notes": "VIP client"
+    }

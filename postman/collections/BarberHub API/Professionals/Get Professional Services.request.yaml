@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Professional Services
+method: GET
+url: '{{baseUrl}}/professional_services?select=service_id&professional_id=eq.{{professionalId}}'
+order: 5000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

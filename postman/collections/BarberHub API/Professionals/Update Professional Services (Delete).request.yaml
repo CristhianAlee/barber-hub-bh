@@ -1,0 +1,10 @@
+$kind: http-request
+name: 'Update Professional Services (Delete)'
+method: DELETE
+url: '{{baseUrl}}/professional_services?professional_id=eq.{{professionalId}}'
+order: 6000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

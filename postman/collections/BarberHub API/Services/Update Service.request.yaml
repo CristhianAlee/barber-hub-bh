@@ -1,0 +1,23 @@
+$kind: http-request
+name: Update Service
+method: PATCH
+url: '{{baseUrl}}/services?id=eq.{{serviceId}}'
+order: 4000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "name": "Corte de Cabelo",
+      "duration_minutes": 30,
+      "price": 40.00,
+      "active": true
+    }

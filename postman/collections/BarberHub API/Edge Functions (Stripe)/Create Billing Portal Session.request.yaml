@@ -1,0 +1,15 @@
+$kind: http-request
+name: Create Billing Portal Session
+method: POST
+url: '{{functionsUrl}}/create-portal'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{}'

@@ -1,0 +1,18 @@
+name: BarberHub
+values:
+  - key: SUPABASE_URL
+    value: ''
+    enabled: true
+    type: default
+  - key: SUPABASE_ANON_KEY
+    value: ''
+    enabled: true
+    type: secret
+  - key: ACCESS_TOKEN
+    value: ''
+    enabled: true
+    type: secret
+  - key: STRIPE_WEBHOOK_SIGNATURE
+    value: ''
+    enabled: true
+    type: secret

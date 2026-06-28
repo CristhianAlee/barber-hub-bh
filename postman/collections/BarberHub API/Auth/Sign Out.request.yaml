@@ -1,0 +1,10 @@
+$kind: http-request
+name: Sign Out
+method: POST
+url: '{{authUrl}}/logout'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

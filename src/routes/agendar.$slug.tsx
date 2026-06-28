@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/hooks/useLanguage";
 import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
-import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { publicBookingSchema } from "@/lib/validationSchemas";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
@@ -23,19 +22,6 @@ const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.get
 const timeToMinutes = (value: string) => {
   const [hh, mm] = value.split(":").map(Number);
   return hh * 60 + mm;
-};
-
-/** UUID v4 válido. crypto.randomUUID exige secure context (https); em
- *  http (localhost/LAN) ele não existe — getRandomValues funciona sempre. */
-const safeUuid = (): string => {
-  const c = globalThis.crypto;
-  if (c && typeof c.randomUUID === "function") return c.randomUUID();
-  const b = new Uint8Array(16);
-  c.getRandomValues(b);
-  b[6] = (b[6] & 0x0f) | 0x40;
-  b[8] = (b[8] & 0x3f) | 0x80;
-  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0"));
-  return `${h[0]}${h[1]}${h[2]}${h[3]}-${h[4]}${h[5]}-${h[6]}${h[7]}-${h[8]}${h[9]}-${h[10]}${h[11]}${h[12]}${h[13]}${h[14]}${h[15]}`;
 };
 
 function LangToggle() {
@@ -239,34 +225,39 @@ function PublicBooking() {
     }
 
     const phoneDigits = onlyDigits(phone);
-    const clientId = safeUuid();
 
-    const clientPayload = { id: clientId, barbershop_id: bs.id, name, phone: phoneDigits, email: email || null };
-    const { error: clientError } = await supabasePublic
-      .from("clients")
-      .insert(clientPayload);
-    if (clientError) {
-      setSubmitting(false);
-      console.error("[agendar.submit] cliente", clientError);
-      return toast.error(getFriendlyErrorMessage(clientError, "agendar"));
-    }
+    // Insert via Edge Function public-booking (service_role) — não usa mais
+    // acesso anon direto às tabelas clients/appointments.
+    const { data, error } = await supabasePublic.functions.invoke("public-booking", {
+      body: {
+        barbershop_id: bs.id,
+        professional_id: finalProfId,
+        service_id: service.id,
+        date,
+        time,
+        duration_minutes: service.duration_minutes,
+        client_name: name,
+        client_phone: phoneDigits,
+        client_email: email || null,
+        notes: notes || null,
+      },
+    });
 
-    const apptPayload = {
-      barbershop_id: bs.id,
-      professional_id: finalProfId,
-      client_id: clientId,
-      service_id: service.id,
-      date, time,
-      duration_minutes: service.duration_minutes,
-      status: "pending" as const,
-      notes: notes || null,
-    };
-    const { error } = await supabasePublic.from("appointments").insert(apptPayload);
-    if (error) {
+    if (error || !data?.success) {
       setSubmitting(false);
-      console.error("[agendar.submit] agendamento", error);
-      if (error.code === "23505") { setTime(""); return toast.error("Horário já ocupado, escolha outro"); }
-      return toast.error(getFriendlyErrorMessage(error, "agendar"));
+      // Extrai a mensagem amigável retornada pela função (corpo do erro HTTP).
+      let msg = "Não foi possível agendar. Tente novamente.";
+      if (data?.error) {
+        msg = data.error;
+      } else if (error) {
+        try {
+          const body = await (error as any)?.context?.json?.();
+          if (body?.error) msg = body.error;
+        } catch { /* mantém msg padrão */ }
+      }
+      console.error("[agendar.submit] public-booking", error ?? data);
+      if (msg.toLowerCase().includes("ocupado")) setTime("");
+      return toast.error(msg);
     }
 
     const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";

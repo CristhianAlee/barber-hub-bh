@@ -1,0 +1,38 @@
+$kind: collection
+name: BarberHub API
+description: 'API collection for BarberHub - Barbershop management platform built on Supabase. Covers Auth, Barbershop, Appointments, Clients, Services, Professionals, Financial, Products/Stock, Public Booking, and Stripe Edge Functions.'
+variables:
+  - key: baseUrl
+    value: '{{SUPABASE_URL}}/rest/v1'
+  - key: authUrl
+    value: '{{SUPABASE_URL}}/auth/v1'
+  - key: functionsUrl
+    value: '{{SUPABASE_URL}}/functions/v1'
+  - key: barbershopId
+    value: ''
+  - key: appointmentId
+    value: ''
+  - key: clientId
+    value: ''
+  - key: serviceId
+    value: ''
+  - key: professionalId
+    value: ''
+  - key: productId
+    value: ''
+  - key: entryId
+    value: ''
+  - key: fixedCostId
+    value: ''
+  - key: date
+    value: '2026-07-01'
+  - key: fromDate
+    value: '2026-07-01'
+  - key: toDate
+    value: '2026-07-31'
+  - key: slug
+    value: 'minha-barbearia'
+  - key: phone
+    value: '11999999999'
+  - key: cutoffDate
+    value: '2026-05-29'

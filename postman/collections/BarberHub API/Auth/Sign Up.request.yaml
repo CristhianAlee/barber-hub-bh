@@ -1,0 +1,18 @@
+$kind: http-request
+name: Sign Up
+method: POST
+url: '{{authUrl}}/signup'
+order: 1000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "owner@example.com",
+      "password": "password123",
+      "data": { "full_name": "John Doe" }
+    }

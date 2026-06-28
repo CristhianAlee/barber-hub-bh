@@ -1,0 +1,22 @@
+$kind: http-request
+name: Reschedule Appointment
+method: PATCH
+url: '{{baseUrl}}/appointments?id=eq.{{appointmentId}}'
+order: 4000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "date": "2026-07-02",
+      "time": "11:00",
+      "status": "confirmed"
+    }

@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Client by ID
+method: GET
+url: '{{baseUrl}}/clients?select=*&id=eq.{{clientId}}'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

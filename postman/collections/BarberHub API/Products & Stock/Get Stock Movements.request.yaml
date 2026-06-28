@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Stock Movements
+method: GET
+url: '{{baseUrl}}/stock_movements?select=*,products(name)&barbershop_id=eq.{{barbershopId}}&order=created_at.desc'
+order: 4000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

@@ -1,0 +1,21 @@
+$kind: http-request
+name: Update Fixed Cost
+method: PATCH
+url: '{{baseUrl}}/fixed_costs?id=eq.{{fixedCostId}}'
+order: 7000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "amount": 1600.00,
+      "active": true
+    }

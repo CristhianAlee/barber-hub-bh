@@ -1,0 +1,22 @@
+$kind: http-request
+name: Create Professional
+method: POST
+url: '{{baseUrl}}/professionals'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "barbershop_id": "{{barbershopId}}",
+      "name": "Carlos Barbeiro",
+      "phone": "11988888888"
+    }

@@ -1,0 +1,28 @@
+$kind: http-request
+name: Create Appointment
+method: POST
+url: '{{baseUrl}}/appointments'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "barbershop_id": "{{barbershopId}}",
+      "professional_id": "{{professionalId}}",
+      "client_id": "{{clientId}}",
+      "service_id": "{{serviceId}}",
+      "date": "2026-07-01",
+      "time": "10:00",
+      "duration_minutes": 30,
+      "status": "confirmed",
+      "notes": null
+    }

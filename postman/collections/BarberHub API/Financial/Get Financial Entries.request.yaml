@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Financial Entries
+method: GET
+url: '{{baseUrl}}/financial_entries?select=*&barbershop_id=eq.{{barbershopId}}&date=gte.{{fromDate}}&date=lte.{{toDate}}&order=date.desc,created_at.desc'
+order: 1000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

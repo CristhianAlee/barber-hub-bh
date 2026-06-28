@@ -1,0 +1,26 @@
+$kind: http-request
+name: Create Product
+method: POST
+url: '{{baseUrl}}/products'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "barbershop_id": "{{barbershopId}}",
+      "name": "Pomada Modeladora",
+      "category": "Finalizadores",
+      "stock_quantity": 10,
+      "min_stock_alert": 3,
+      "unit_price": 25.00,
+      "cost_price": 12.00
+    }

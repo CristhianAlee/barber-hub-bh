@@ -1,0 +1,20 @@
+$kind: http-request
+name: Update Appointment Status
+method: PATCH
+url: '{{baseUrl}}/appointments?id=eq.{{appointmentId}}'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "status": "confirmed"
+    }

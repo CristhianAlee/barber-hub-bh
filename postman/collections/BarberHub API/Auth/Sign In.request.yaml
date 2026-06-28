@@ -1,0 +1,17 @@
+$kind: http-request
+name: Sign In
+method: POST
+url: '{{authUrl}}/token?grant_type=password'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "owner@example.com",
+      "password": "password123"
+    }

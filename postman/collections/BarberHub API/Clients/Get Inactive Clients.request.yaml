@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Inactive Clients
+method: GET
+url: '{{baseUrl}}/clients?select=*&barbershop_id=eq.{{barbershopId}}&or=(last_visit.is.null,last_visit.lte.{{cutoffDate}})'
+order: 6000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

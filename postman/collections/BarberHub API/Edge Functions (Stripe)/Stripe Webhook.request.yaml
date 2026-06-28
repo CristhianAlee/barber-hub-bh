@@ -1,0 +1,17 @@
+$kind: http-request
+name: Stripe Webhook
+method: POST
+url: '{{functionsUrl}}/stripe-webhook'
+order: 3000
+headers:
+  - key: stripe-signature
+    value: '{{STRIPE_WEBHOOK_SIGNATURE}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "type": "checkout.session.completed",
+      "data": { "object": {} }
+    }

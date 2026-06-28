@@ -1,0 +1,22 @@
+$kind: http-request
+name: Create Public Client
+method: POST
+url: '{{baseUrl}}/clients'
+order: 7000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "id": "{{clientId}}",
+      "barbershop_id": "{{barbershopId}}",
+      "name": "João Silva",
+      "phone": "11999999999",
+      "email": null
+    }

@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Public Professionals
+method: GET
+url: '{{baseUrl}}/public_professionals?select=id,name&barbershop_id=eq.{{barbershopId}}'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'

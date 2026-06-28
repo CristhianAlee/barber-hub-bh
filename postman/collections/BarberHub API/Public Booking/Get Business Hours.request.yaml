@@ -1,0 +1,8 @@
+$kind: http-request
+name: Get Business Hours
+method: GET
+url: '{{baseUrl}}/business_hours?select=day_of_week,open_time,close_time,is_closed&barbershop_id=eq.{{barbershopId}}'
+order: 4000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'

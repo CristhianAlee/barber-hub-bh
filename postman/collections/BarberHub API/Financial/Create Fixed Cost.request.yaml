@@ -1,0 +1,24 @@
+$kind: http-request
+name: Create Fixed Cost
+method: POST
+url: '{{baseUrl}}/fixed_costs'
+order: 6000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "barbershop_id": "{{barbershopId}}",
+      "name": "Aluguel",
+      "amount": 1500.00,
+      "due_day": 5,
+      "category": "Infraestrutura"
+    }

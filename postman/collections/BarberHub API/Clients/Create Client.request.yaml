@@ -1,0 +1,24 @@
+$kind: http-request
+name: Create Client
+method: POST
+url: '{{baseUrl}}/clients'
+order: 4000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "barbershop_id": "{{barbershopId}}",
+      "name": "João Silva",
+      "phone": "11999999999",
+      "email": "joao@example.com",
+      "notes": null
+    }

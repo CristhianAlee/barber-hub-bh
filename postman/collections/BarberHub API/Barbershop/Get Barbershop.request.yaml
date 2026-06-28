@@ -1,0 +1,12 @@
+$kind: http-request
+name: Get Barbershop
+method: GET
+url: '{{baseUrl}}/barbershops?select=*&limit=1'
+order: 1000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Prefer
+    value: return=representation

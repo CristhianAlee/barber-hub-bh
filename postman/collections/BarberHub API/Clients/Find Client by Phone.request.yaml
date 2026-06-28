@@ -1,0 +1,10 @@
+$kind: http-request
+name: Find Client by Phone
+method: GET
+url: '{{baseUrl}}/clients?select=*&barbershop_id=eq.{{barbershopId}}&phone=eq.{{phone}}'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

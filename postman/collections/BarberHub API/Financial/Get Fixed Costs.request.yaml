@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Fixed Costs
+method: GET
+url: '{{baseUrl}}/fixed_costs?select=*&barbershop_id=eq.{{barbershopId}}&order=name'
+order: 5000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

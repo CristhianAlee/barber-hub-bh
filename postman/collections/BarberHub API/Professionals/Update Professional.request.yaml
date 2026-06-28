@@ -1,0 +1,22 @@
+$kind: http-request
+name: Update Professional
+method: PATCH
+url: '{{baseUrl}}/professionals?id=eq.{{professionalId}}'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "name": "Carlos Barbeiro",
+      "phone": "11988888888",
+      "active": true
+    }

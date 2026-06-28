@@ -1,0 +1,10 @@
+$kind: http-request
+name: Delete Fixed Cost
+method: DELETE
+url: '{{baseUrl}}/fixed_costs?id=eq.{{fixedCostId}}'
+order: 8000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

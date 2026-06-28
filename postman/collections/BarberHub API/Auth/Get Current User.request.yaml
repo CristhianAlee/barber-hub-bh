@@ -1,0 +1,10 @@
+$kind: http-request
+name: Get Current User
+method: GET
+url: '{{authUrl}}/user'
+order: 5000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'

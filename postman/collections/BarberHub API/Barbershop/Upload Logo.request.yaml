@@ -1,0 +1,12 @@
+$kind: http-request
+name: Upload Logo
+method: POST
+url: '{{SUPABASE_URL}}/storage/v1/object/logos/{{barbershopId}}/logo.jpg'
+order: 3000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: image/jpeg

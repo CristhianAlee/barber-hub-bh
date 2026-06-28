@@ -1,0 +1,15 @@
+$kind: http-request
+name: Create Checkout Session
+method: POST
+url: '{{functionsUrl}}/create-checkout'
+order: 1000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: '{}'

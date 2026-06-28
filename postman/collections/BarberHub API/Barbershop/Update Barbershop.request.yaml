@@ -1,0 +1,25 @@
+$kind: http-request
+name: Update Barbershop
+method: PATCH
+url: '{{baseUrl}}/barbershops?id=eq.{{barbershopId}}'
+order: 2000
+headers:
+  - key: apikey
+    value: '{{SUPABASE_ANON_KEY}}'
+  - key: Authorization
+    value: 'Bearer {{ACCESS_TOKEN}}'
+  - key: Content-Type
+    value: application/json
+  - key: Prefer
+    value: return=representation
+body:
+  type: json
+  content: |-
+    {
+      "name": "My Barbershop",
+      "phone": "11999999999",
+      "address": "Rua Exemplo, 123",
+      "booking_interval_minutes": 30,
+      "max_advance_days": 30,
+      "onboarded": true
+    }
