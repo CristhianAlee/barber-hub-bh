@@ -288,7 +288,7 @@ function Dashboard() {
               <LineChart data={chartData} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="oklch(0.30 0 0)" vertical={false} />
                 <XAxis dataKey="day" tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} width={36} tickFormatter={(v) => v > 0 ? `${(v / 1000).toFixed(0)}k` : "0"} />
+                <YAxis tick={{ fill: "oklch(0.65 0 0)", fontSize: 11 }} axisLine={false} tickLine={false} width={48} tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1).replace(".0", "")}k` : `R$${v}`)} />
                 <Tooltip
                   contentStyle={{ background: "oklch(0.14 0 0)", border: "1px solid oklch(0.26 0 0)", borderRadius: 10, fontSize: 12, color: "oklch(0.92 0 0)" }}
                   labelStyle={{ color: "oklch(0.78 0.14 75)", fontWeight: 600, marginBottom: 4 }}

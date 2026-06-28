@@ -470,8 +470,11 @@ function PublicBooking() {
             )}
 
             <Button
-              onClick={() => setStep(4)}
-              disabled={!date || !time}
+              onClick={() => {
+                if (!date) return toast.error("Selecione uma data para continuar");
+                if (!time) return toast.error("Selecione um horário para continuar");
+                setStep(4);
+              }}
               className="mt-5 w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
             >
               {t("next")}
