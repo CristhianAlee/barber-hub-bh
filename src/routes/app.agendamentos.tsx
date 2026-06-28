@@ -23,7 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock, UserX, AlertTriangle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock, UserX, AlertTriangle, Calendar as CalendarIcon } from "lucide-react";
 import { brl, formatPhone, onlyDigits } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { appointmentSchema } from "@/lib/validationSchemas";
@@ -44,11 +46,14 @@ const APPT_SELECT =
   "id, date, time, status, notes, duration_minutes, barbershop_id, professional_id, client_id, service_id, clients(name, phone), services(name, price, duration_minutes), professionals(name)";
 const dayLabel = (d: Date) =>
   new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
+const shortDateLabel = (d: Date) =>
+  new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
 
 function AgendamentosPage() {
   const { barbershop } = useAuth();
   const { t } = useLanguage();
   const [date, setDate] = useState<Date>(new Date());
+  const [calOpen, setCalOpen] = useState(false);
   const [appts, setAppts] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
   const [showPending, setShowPending] = useState(false);
@@ -114,11 +119,32 @@ function AgendamentosPage() {
           <Button variant="outline" size="icon" onClick={() => setDate(addDays(date, -1))}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={() => setDate(new Date())}>
-            {t("appt_today")}
-          </Button>
+          <Popover open={calOpen} onOpenChange={setCalOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="min-w-[9.5rem] justify-start capitalize">
+                <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                {shortDateLabel(date)}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={(d) => {
+                  if (d) {
+                    setDate(d);
+                    setCalOpen(false);
+                  }
+                }}
+                autoFocus
+              />
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" size="icon" onClick={() => setDate(addDays(date, 1))}>
             <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" onClick={() => setDate(new Date())}>
+            {t("appt_today")}
           </Button>
           <Button
             variant={showPending ? "default" : "outline"}

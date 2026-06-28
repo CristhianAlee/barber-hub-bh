@@ -801,6 +801,7 @@ function ServicesTab() {
   const { t } = useLanguage();
   const [list, setList] = useState<any[]>([]);
   const [form, setForm] = useState({ name: "", duration: 30, price: 0 });
+  const [open, setOpen] = useState(false);
 
   const load = async () => {
     if (!barbershop) return;
@@ -834,6 +835,7 @@ function ServicesTab() {
       );
     }
     setForm({ name: "", duration: 30, price: 0 });
+    setOpen(false);
     load();
   };
   const remove = async (id: string) => {
@@ -848,14 +850,43 @@ function ServicesTab() {
 
   return (
     <Card className="border-border bg-card p-5">
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-12">
-        <Input className="md:col-span-5" maxLength={80} placeholder={t("settings_service_name")} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <Input className="md:col-span-3" type="number" placeholder={t("settings_service_duration")} value={form.duration} onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })} />
-        <Input className="md:col-span-2" type="number" placeholder={t("settings_service_price")} value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
-        <Button className="md:col-span-2 bg-gradient-gold text-gold-foreground hover:opacity-90" onClick={add}>
+      <div className="flex justify-end">
+        <Button
+          className="bg-gradient-gold text-gold-foreground hover:opacity-90"
+          onClick={() => { setForm({ name: "", duration: 30, price: 0 }); setOpen(true); }}
+        >
           <Plus className="mr-1 h-4 w-4" /> {t("add")}
         </Button>
       </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display tracking-wide">Novo Serviço</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="svc-name">{t("settings_service_name")}</Label>
+              <Input id="svc-name" maxLength={80} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="svc-duration">{t("settings_service_duration")}</Label>
+              <Input id="svc-duration" type="number" value={form.duration} onChange={(e) => setForm({ ...form, duration: Number(e.target.value) })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="svc-price">{t("settings_service_price")}</Label>
+              <Input id="svc-price" type="number" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>{t("cancel")}</Button>
+            <Button className="bg-gradient-gold text-gold-foreground hover:opacity-90" onClick={add}>
+              {t("save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="mt-4 space-y-2">
         {list.map((s) => (
           <div key={s.id} className="flex items-center justify-between rounded-lg border border-border p-3">
