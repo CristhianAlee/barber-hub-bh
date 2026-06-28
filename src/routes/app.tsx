@@ -79,6 +79,18 @@ function AppLayout() {
     );
   }
 
+  // Sem barbearia / onboarding incompleto: NÃO renderiza o painel (evita telas
+  // quebradas com dados nulos). O useEffect acima já redireciona para o
+  // onboarding; aqui mostramos o loader enquanto o redirect acontece. Na
+  // própria rota de onboarding, renderiza normalmente (o Outlet = formulário).
+  if ((!barbershop || !barbershop.onboarded) && !path.includes("/onboarding")) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-gold" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop sidebar */}
