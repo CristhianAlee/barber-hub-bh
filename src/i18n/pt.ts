@@ -94,7 +94,7 @@ export const pt = {
   landing_footer_support: "Suporte",
   landing_footer_privacy: "Privacidade",
   landing_footer_terms: "Termos de Uso",
-  landing_footer_email: "suporte@barberhub.com.br",
+  landing_footer_email: "suportetratobarber@gmail.com",
 
   // ── Auth
   auth_login_title: "Entrar",

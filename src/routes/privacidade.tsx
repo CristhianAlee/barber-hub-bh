@@ -38,8 +38,8 @@ function PoliticaDePrivacidade() {
         <div className="mt-4 rounded-lg border border-border bg-card/50 p-4 text-[13px] text-muted-foreground">
           <strong className="text-foreground">Controlador dos dados:</strong> Trato Barber<br />
           <strong className="text-foreground">E-mail do DPO:</strong>{" "}
-          <a href="mailto:privacidade@barberhub.com.br" className="text-gold hover:underline">
-            privacidade@barberhub.com.br
+          <a href="mailto:suportetratobarber@gmail.com" className="text-gold hover:underline">
+            suportetratobarber@gmail.com
           </a>
         </div>
 
@@ -152,8 +152,8 @@ function PoliticaDePrivacidade() {
             </ul>
             <p className="mt-3 text-muted-foreground">
               Para exercer seus direitos:{" "}
-              <a href="mailto:privacidade@barberhub.com.br" className="text-gold hover:underline">
-                privacidade@barberhub.com.br
+              <a href="mailto:suportetratobarber@gmail.com" className="text-gold hover:underline">
+                suportetratobarber@gmail.com
               </a>{" "}
               — prazo de resposta: até 15 dias úteis.
             </p>
@@ -192,8 +192,8 @@ function PoliticaDePrivacidade() {
             <p className="text-muted-foreground">
               Nome: Trato Barber — Equipe de Privacidade<br />
               E-mail:{" "}
-              <a href="mailto:privacidade@barberhub.com.br" className="text-gold hover:underline">
-                privacidade@barberhub.com.br
+              <a href="mailto:suportetratobarber@gmail.com" className="text-gold hover:underline">
+                suportetratobarber@gmail.com
               </a>
               <br />
               Disponível para dúvidas sobre privacidade e exercício de direitos previstos na LGPD.

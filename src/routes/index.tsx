@@ -435,7 +435,7 @@ function Landing() {
 
             <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
               <a
-                href="mailto:suporte@barberhub.com.br"
+                href="mailto:suportetratobarber@gmail.com"
                 className="flex items-center gap-1.5 transition hover:text-gold"
               >
                 <Mail className="h-3.5 w-3.5" />

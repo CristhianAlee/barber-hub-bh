@@ -713,7 +713,7 @@ function ContaTab() {
       `ID: ${user?.id ?? ""}\n\n` +
       `Confirmo que esta ação é irreversível e que todos os dados serão removidos em até 90 dias.`
     );
-    window.open(`mailto:privacidade@barberhub.com.br?subject=${subject}&body=${body}`, "_blank");
+    window.open(`mailto:suportetratobarber@gmail.com?subject=${subject}&body=${body}`, "_blank");
     setSending(false);
     setOpen(false);
     setConfirm("");

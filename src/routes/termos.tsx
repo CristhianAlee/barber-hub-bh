@@ -135,8 +135,8 @@ function TermosDeUso() {
           <S n="12" title="CONTATO">
             <p className="text-muted-foreground">
               E-mail:{" "}
-              <a href="mailto:suporte@barberhub.com.br" className="text-gold hover:underline">
-                suporte@barberhub.com.br
+              <a href="mailto:suportetratobarber@gmail.com" className="text-gold hover:underline">
+                suportetratobarber@gmail.com
               </a>
             </p>
           </S>
