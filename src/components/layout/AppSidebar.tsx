@@ -138,6 +138,27 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
           <LogOut className="mr-2 h-4 w-4" />
           {t("nav_logout")}
         </Button>
+
+        {/* Suporte + crédito de desenvolvimento (discreto) */}
+        <div className="space-y-0.5 pt-1 text-center text-[10px] text-muted-foreground/70">
+          <a
+            href="mailto:suportetratobarber@gmail.com"
+            className="block truncate transition hover:text-gold"
+          >
+            📧 {t("support_email")}
+          </a>
+          <div>
+            {t("developed_by")}{" "}
+            <a
+              href="https://mxsites.com.br"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition hover:text-gold"
+            >
+              MX Sites
+            </a>
+          </div>
+        </div>
       </div>
     </aside>
   );
