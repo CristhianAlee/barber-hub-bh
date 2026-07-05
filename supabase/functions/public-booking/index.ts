@@ -5,6 +5,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
+// Global do runtime Supabase Edge para tarefas em background após a resposta.
+declare const EdgeRuntime: { waitUntil: (p: Promise<unknown>) => void } | undefined;
+
 // Remove tags HTML e limita tamanho (defesa contra XSS persistido).
 function sanitizeText(input: unknown, max: number): string {
   return String(input ?? "")
@@ -148,7 +151,37 @@ Deno.serve(async (req) => {
       return json({ success: false, error: "Não foi possível concluir o agendamento." }, 400);
     }
 
-    // 7) Sucesso
+    // 7) Sucesso — dispara confirmação WhatsApp em BACKGROUND (não bloqueia a
+    // resposta do booking). Busca dados da mensagem e chama send-whatsapp.
+    const sendConfirmation = async () => {
+      try {
+        const [shopRes, svcRes, profRes] = await Promise.all([
+          admin.from("barbershops").select("name, phone").eq("id", barbershop_id).maybeSingle(),
+          admin.from("services").select("name").eq("id", service_id).maybeSingle(),
+          admin.from("professionals").select("name").eq("id", professional_id).maybeSingle(),
+        ]);
+        const [yy, mm, dd] = String(date).split("-");
+        const dataBR = `${dd}/${mm}/${yy}`;
+        const message =
+          `Olá ${name}! 👋\n\n` +
+          `Seu agendamento está confirmado! ✂️\n\n` +
+          `🏪 Barbearia: ${shopRes.data?.name ?? ""}\n` +
+          `📅 Data: ${dataBR}\n` +
+          `⏰ Horário: ${time}\n` +
+          `💈 Serviço: ${svcRes.data?.name ?? ""}\n` +
+          `👤 Profissional: ${profRes.data?.name ?? ""}\n\n` +
+          `Para cancelar ou reagendar, entre em contato:\n` +
+          `📱 ${shopRes.data?.phone ?? ""}\n\n` +
+          `Te esperamos!`;
+        await admin.functions.invoke("send-whatsapp", { body: { phone, message } });
+      } catch (e) {
+        console.error("[public-booking] confirmação WhatsApp:", e);
+      }
+    };
+    // EdgeRuntime é global no runtime Supabase; fallback fire-and-forget local.
+    if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(sendConfirmation());
+    else void sendConfirmation();
+
     return json({ success: true, appointment_id: appt.id }, 200);
   } catch (err) {
     console.error("[public-booking] erro inesperado:", err);

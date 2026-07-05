@@ -261,9 +261,8 @@ function PublicBooking() {
     }
 
     const profName = profs.find((p) => p.id === finalProfId)?.name ?? "";
-    const msg = `✅ *Agendamento Confirmado!*\n\nOlá ${name}! Seu agendamento foi confirmado com sucesso. 💈\n\n✂️ *Serviço:* ${service.name}\n👤 *Profissional:* ${profName}\n📅 *Data:* ${formatDateBR(date)}\n⏰ *Horário:* ${time}\n💰 *Valor:* ${brl(Number(service.price))}\n\n📍 *${bs.name}*\n${bs.address ?? ""}\n\nQualquer dúvida entre em contato conosco.\nAté lá! 💈`;
-    const waUrl = `https://wa.me/55${phoneDigits}?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, "_blank");
+    // A confirmação por WhatsApp agora é enviada automaticamente pela Z-API
+    // (Edge Function public-booking) — sem window.open/wa.me manual aqui.
 
     setCreated({ service: service.name, price: service.price, prof: profName, date, time, name });
     setSubmitting(false);
