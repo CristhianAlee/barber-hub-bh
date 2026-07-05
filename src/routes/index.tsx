@@ -234,7 +234,7 @@ function Landing() {
           <Link to="/" className="flex items-center gap-2">
             <Logo size={36} />
             <span className="font-display text-2xl tracking-wider">
-              BARBER<span className="text-gold">HUB</span>
+              TRATO <span className="text-gold">BARBER</span>
             </span>
           </Link>
 
@@ -429,7 +429,7 @@ function Landing() {
             <div className="flex items-center gap-2">
               <Logo size={32} />
               <span className="font-display text-xl tracking-wider">
-                BARBER<span className="text-gold">HUB</span>
+                TRATO <span className="text-gold">BARBER</span>
               </span>
             </div>
 
@@ -450,7 +450,7 @@ function Landing() {
             </nav>
 
             <p className="text-center text-xs text-muted-foreground">
-              © {new Date().getFullYear()} BarberHub — {t("landing_footer_rights")}
+              © {new Date().getFullYear()} Trato Barber — {t("landing_footer_rights")}
             </p>
           </div>
         </div>

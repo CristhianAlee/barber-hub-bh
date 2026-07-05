@@ -55,7 +55,7 @@ function Planos() {
           <Link to="/" className="flex items-center gap-2">
             <Logo size={32} />
             <span className="font-display text-xl tracking-wider">
-              BARBER<span className="text-gold">HUB</span>
+              TRATO <span className="text-gold">BARBER</span>
             </span>
           </Link>
           {!user && (
@@ -78,7 +78,7 @@ function Planos() {
         {/* Card único */}
         <Card className="mx-auto max-w-md border-gold/40 bg-gradient-to-br from-gold/10 to-card p-8 shadow-gold">
           <div className="text-center">
-            <h2 className="font-display text-2xl tracking-wide text-gold">BarberHub Pro</h2>
+            <h2 className="font-display text-2xl tracking-wide text-gold">Trato Barber Pro</h2>
             <div className="mt-3 flex items-end justify-center gap-1">
               <span className="font-display text-5xl tracking-wide">R$ 69,99</span>
               <span className="mb-1 text-sm text-muted-foreground">/mês</span>

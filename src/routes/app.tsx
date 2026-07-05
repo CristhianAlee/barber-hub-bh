@@ -104,7 +104,7 @@ function AppLayout() {
           <div className="flex items-center gap-2">
             <Logo size={32} />
             <span className="font-display text-xl tracking-wider">
-              BARBER<span className="text-gold">HUB</span>
+              TRATO <span className="text-gold">BARBER</span>
             </span>
           </div>
           <div className="flex items-center gap-2">

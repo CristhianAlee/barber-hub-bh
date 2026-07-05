@@ -24,7 +24,7 @@ function TermosDeUso() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <Logo size={28} />
-            <span className="font-display text-lg tracking-wider">BARBER<span className="text-gold">HUB</span></span>
+            <span className="font-display text-lg tracking-wider">TRATO <span className="text-gold">BARBER</span></span>
           </Link>
           <Link to="/" className="flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Voltar
@@ -39,13 +39,13 @@ function TermosDeUso() {
         <div className="mt-10 space-y-8">
           <S n="1" title="ACEITAÇÃO DOS TERMOS">
             <p>
-              Ao criar uma conta no BarberHub, você concorda com estes Termos de Uso integralmente.
+              Ao criar uma conta no Trato Barber, você concorda com estes Termos de Uso integralmente.
               Se não concordar, não utilize o serviço.
             </p>
           </S>
 
           <S n="2" title="DESCRIÇÃO DO SERVIÇO">
-            <p>O BarberHub é uma plataforma SaaS (Software como Serviço) de gestão para barbearias que oferece:</p>
+            <p>O Trato Barber é uma plataforma SaaS (Software como Serviço) de gestão para barbearias que oferece:</p>
             <ul className="ml-4 list-disc space-y-1 text-muted-foreground">
               <li>Sistema de agendamento online</li>
               <li>Controle financeiro</li>
@@ -67,7 +67,7 @@ function TermosDeUso() {
 
           <S n="4" title="PLANOS E PAGAMENTOS">
             <ul className="space-y-1 text-muted-foreground">
-              <li>4.1 O BarberHub oferece período de teste gratuito de 7 dias, sem necessidade de cartão de crédito.</li>
+              <li>4.1 O Trato Barber oferece período de teste gratuito de 7 dias, sem necessidade de cartão de crédito.</li>
               <li>4.2 Após o período de teste, é necessário assinar um plano pago para continuar utilizando.</li>
               <li>4.3 Os valores são cobrados mensalmente via cartão de crédito processado pelo Stripe.</li>
               <li>4.4 Não há reembolso por períodos parciais.</li>
@@ -78,14 +78,14 @@ function TermosDeUso() {
           <S n="5" title="DADOS DOS SEUS CLIENTES">
             <ul className="space-y-1 text-muted-foreground">
               <li>5.1 Você é o controlador dos dados dos seus clientes (nomes, telefones, histórico de atendimentos).</li>
-              <li>5.2 O BarberHub atua como operador desses dados, conforme definido pela LGPD (Lei 13.709/2018).</li>
+              <li>5.2 O Trato Barber atua como operador desses dados, conforme definido pela LGPD (Lei 13.709/2018).</li>
               <li>5.3 Você é responsável por obter o consentimento dos seus clientes para o uso dos dados.</li>
-              <li>5.4 O BarberHub não vende, compartilha ou usa os dados dos seus clientes para outros fins.</li>
+              <li>5.4 O Trato Barber não vende, compartilha ou usa os dados dos seus clientes para outros fins.</li>
             </ul>
           </S>
 
           <S n="6" title="USO ACEITÁVEL">
-            <p className="text-muted-foreground">É proibido utilizar o BarberHub para:</p>
+            <p className="text-muted-foreground">É proibido utilizar o Trato Barber para:</p>
             <ul className="ml-4 mt-2 list-disc space-y-1 text-muted-foreground">
               <li>Cadastrar informações falsas ou enganosas</li>
               <li>Violar direitos de terceiros</li>
@@ -104,7 +104,7 @@ function TermosDeUso() {
           </S>
 
           <S n="8" title="LIMITAÇÃO DE RESPONSABILIDADE">
-            <p className="text-muted-foreground">O BarberHub não se responsabiliza por:</p>
+            <p className="text-muted-foreground">O Trato Barber não se responsabiliza por:</p>
             <ul className="ml-4 mt-2 list-disc space-y-1 text-muted-foreground">
               <li>Perda de receita causada por indisponibilidade</li>
               <li>Danos causados pelo uso inadequado da plataforma</li>
@@ -144,7 +144,7 @@ function TermosDeUso() {
       </main>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} BarberHub — Todos os direitos reservados
+        © {new Date().getFullYear()} Trato Barber — Todos os direitos reservados
       </footer>
     </div>
   );

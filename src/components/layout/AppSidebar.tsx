@@ -55,7 +55,7 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
         <Logo size={36} />
         <div>
           <div className="font-display text-xl leading-none tracking-wider">
-            BARBER<span className="text-gold">HUB</span>
+            TRATO <span className="text-gold">BARBER</span>
           </div>
           <div className="text-[9px] uppercase tracking-[0.25em] text-muted-foreground">
             {t("nav_management")}

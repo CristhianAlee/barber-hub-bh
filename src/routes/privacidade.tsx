@@ -24,7 +24,7 @@ function PoliticaDePrivacidade() {
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
             <Logo size={28} />
-            <span className="font-display text-lg tracking-wider">BARBER<span className="text-gold">HUB</span></span>
+            <span className="font-display text-lg tracking-wider">TRATO <span className="text-gold">BARBER</span></span>
           </Link>
           <Link to="/" className="flex items-center gap-1.5 text-sm text-muted-foreground transition hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Voltar
@@ -36,7 +36,7 @@ function PoliticaDePrivacidade() {
         <h1 className="font-display text-4xl tracking-wide md:text-5xl">Política de Privacidade</h1>
         <p className="mt-2 text-sm text-muted-foreground">Última atualização: junho de 2025</p>
         <div className="mt-4 rounded-lg border border-border bg-card/50 p-4 text-[13px] text-muted-foreground">
-          <strong className="text-foreground">Controlador dos dados:</strong> BarberHub<br />
+          <strong className="text-foreground">Controlador dos dados:</strong> Trato Barber<br />
           <strong className="text-foreground">E-mail do DPO:</strong>{" "}
           <a href="mailto:privacidade@barberhub.com.br" className="text-gold hover:underline">
             privacidade@barberhub.com.br
@@ -190,7 +190,7 @@ function PoliticaDePrivacidade() {
 
           <S n="10" title="ENCARREGADO DE DADOS (DPO)">
             <p className="text-muted-foreground">
-              Nome: BarberHub — Equipe de Privacidade<br />
+              Nome: Trato Barber — Equipe de Privacidade<br />
               E-mail:{" "}
               <a href="mailto:privacidade@barberhub.com.br" className="text-gold hover:underline">
                 privacidade@barberhub.com.br
@@ -209,7 +209,7 @@ function PoliticaDePrivacidade() {
       </main>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} BarberHub — Todos os direitos reservados
+        © {new Date().getFullYear()} Trato Barber — Todos os direitos reservados
       </footer>
     </div>
   );

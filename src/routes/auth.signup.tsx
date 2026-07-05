@@ -194,7 +194,7 @@ function Signup() {
             <Link to="/privacidade" target="_blank" rel="noopener" className="text-gold hover:underline">
               Política de Privacidade
             </Link>{" "}
-            do BarberHub. <span className="text-destructive">*</span>
+            do Trato Barber. <span className="text-destructive">*</span>
           </span>
         </label>
         {triedSubmit && !form.terms && (
@@ -207,7 +207,7 @@ function Signup() {
             className="mt-0.5 shrink-0"
           />
           <span>
-            Aceito receber novidades e dicas do BarberHub por e-mail.
+            Aceito receber novidades e dicas do Trato Barber por e-mail.
             Você pode cancelar a qualquer momento.
           </span>
         </label>

@@ -70,7 +70,7 @@ export const en: Record<TranslationKey, string> = {
 
   landing_pricing_title: "Simple and transparent",
   landing_pricing_sub: "No hidden fees, no contracts. Cancel anytime.",
-  landing_pricing_plan: "BarberHub Pro",
+  landing_pricing_plan: "Trato Barber Pro",
   landing_pricing_period: "/month",
   landing_pricing_trial: "7-day free trial, no credit card required",
   landing_pricing_cta: "Start 7-day free trial",
@@ -84,7 +84,7 @@ export const en: Record<TranslationKey, string> = {
 
   landing_faq_title: "Frequently asked questions",
   landing_faq_q1: "Do I need to install any app?",
-  landing_faq_a1: "No! BarberHub works directly in your browser, on both mobile and desktop. No installation required.",
+  landing_faq_a1: "No! Trato Barber works directly in your browser, on both mobile and desktop. No installation required.",
   landing_faq_q2: "Can I use the 7-day trial without paying?",
   landing_faq_a2: "Yes! The trial period is completely free and doesn't require a credit card. You only pay if you decide to continue.",
   landing_faq_q3: "How do my clients book appointments?",
@@ -310,7 +310,7 @@ export const en: Record<TranslationKey, string> = {
   book_success_title: "Booking confirmed!",
   book_success_sub: "You will receive confirmation via WhatsApp shortly.",
   book_new_appt: "Make new booking",
-  book_powered_by: "Powered by BarberHub",
+  book_powered_by: "Powered by Trato Barber",
   book_not_found: "Barbershop not found",
   book_not_found_sub: "The link you accessed is invalid.",
   book_no_services: "No services available.",

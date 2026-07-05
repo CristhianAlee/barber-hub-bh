@@ -19,7 +19,7 @@ function AuthLayout() {
           <Logo size={56} />
           <div className="flex flex-col">
             <span className="font-display text-3xl leading-none tracking-wider">
-              BARBER<span className="text-gold">HUB</span>
+              TRATO <span className="text-gold">BARBER</span>
             </span>
             <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
               Gestão Inteligente
@@ -30,7 +30,7 @@ function AuthLayout() {
           <Outlet />
         </div>
         <p className="mt-6 text-xs text-muted-foreground">
-          © {new Date().getFullYear()} BarberHub
+          © {new Date().getFullYear()} Trato Barber
         </p>
       </div>
     </div>

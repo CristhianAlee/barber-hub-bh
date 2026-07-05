@@ -47,7 +47,7 @@ function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      toast.success("🎉 Assinatura ativada! Bem-vindo ao BarberHub Pro!");
+      toast.success("🎉 Assinatura ativada! Bem-vindo ao Trato Barber Pro!");
       params.delete("checkout");
       const qs = params.toString();
       window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));

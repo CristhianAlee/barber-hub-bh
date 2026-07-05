@@ -151,7 +151,7 @@ function Onboarding() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size={56} />
           <h1 className="mt-3 font-display text-3xl tracking-wide md:text-4xl">
-            Bem-vindo ao <span className="text-gold">BarberHub</span>
+            Bem-vindo ao <span className="text-gold">Trato Barber</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Configure sua barbearia em 4 passos rápidos</p>
         </div>

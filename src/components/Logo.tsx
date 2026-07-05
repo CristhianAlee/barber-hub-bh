@@ -1,4 +1,5 @@
-import logo from "@/assets/barberhub-logo.png";
+// Logo servida de public/ (URL-safe). Trocar o arquivo em public/ atualiza tudo.
+const logo = "/trato-barber-logo.png";
 
 export function Logo({
   size = 40,
@@ -13,17 +14,16 @@ export function Logo({
     return (
       <img
         src={logo}
-        alt="BarberHub — Gestão Inteligente para Barbearias"
+        alt="Trato Barber — Gestão Inteligente para Barbearias"
         className={className}
         style={{ height: size, width: "auto" }}
       />
     );
   }
-  // Just the BH icon area cropped from the full logo (use as-is, scaled)
   return (
     <img
       src={logo}
-      alt="BarberHub"
+      alt="Trato Barber"
       className={`object-contain ${className}`}
       style={{ height: size, width: size }}
     />

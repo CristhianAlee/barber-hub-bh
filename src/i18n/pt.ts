@@ -68,7 +68,7 @@ export const pt = {
 
   landing_pricing_title: "Simples e transparente",
   landing_pricing_sub: "Sem taxas escondidas, sem contratos. Cancele quando quiser.",
-  landing_pricing_plan: "BarberHub Pro",
+  landing_pricing_plan: "Trato Barber Pro",
   landing_pricing_period: "/mês",
   landing_pricing_trial: "7 dias grátis, sem cartão de crédito",
   landing_pricing_cta: "Começar 7 dias grátis",
@@ -82,7 +82,7 @@ export const pt = {
 
   landing_faq_title: "Dúvidas frequentes",
   landing_faq_q1: "Preciso instalar algum aplicativo?",
-  landing_faq_a1: "Não! O BarberHub funciona diretamente no navegador, tanto no celular quanto no computador. Sem instalação, sem complicação.",
+  landing_faq_a1: "Não! O Trato Barber funciona diretamente no navegador, tanto no celular quanto no computador. Sem instalação, sem complicação.",
   landing_faq_q2: "Posso usar durante os 7 dias de teste sem pagar?",
   landing_faq_a2: "Sim! O período de teste é completamente gratuito e não exige cartão de crédito. Você só paga se decidir continuar.",
   landing_faq_q3: "Como meus clientes fazem o agendamento?",
@@ -308,7 +308,7 @@ export const pt = {
   book_success_title: "Agendamento confirmado!",
   book_success_sub: "Você receberá a confirmação pelo WhatsApp em instantes.",
   book_new_appt: "Fazer novo agendamento",
-  book_powered_by: "Powered by BarberHub",
+  book_powered_by: "Powered by Trato Barber",
   book_not_found: "Barbearia não encontrada",
   book_not_found_sub: "O link que você acessou está inválido.",
   book_no_services: "Nenhum serviço disponível.",

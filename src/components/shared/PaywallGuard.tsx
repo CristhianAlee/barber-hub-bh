@@ -74,7 +74,7 @@ export function PaywallGuard({ children }: { children: ReactNode }) {
         <PaywallScreen
           icon={<AlertTriangle className="h-8 w-8" />}
           title="Pagamento pendente"
-          desc="Não conseguimos processar sua última cobrança. Atualize sua forma de pagamento para continuar usando o BarberHub Pro."
+          desc="Não conseguimos processar sua última cobrança. Atualize sua forma de pagamento para continuar usando o Trato Barber Pro."
           cta="Atualizar forma de pagamento"
           action="portal"
         />
@@ -95,7 +95,7 @@ export function PaywallGuard({ children }: { children: ReactNode }) {
         <PaywallScreen
           icon={<Lock className="h-8 w-8" />}
           title="Seu teste grátis terminou"
-          desc="Assine o BarberHub Pro por R$ 69,99/mês e continue com agendamento, financeiro, estoque e tudo mais."
+          desc="Assine o Trato Barber Pro por R$ 69,99/mês e continue com agendamento, financeiro, estoque e tudo mais."
           cta="Assinar agora"
           action="checkout"
         />

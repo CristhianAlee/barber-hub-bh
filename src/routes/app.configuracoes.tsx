@@ -673,7 +673,7 @@ function SubscriptionCard() {
       )}
       {status === "active" && (
         <p className="mt-3 text-sm text-muted-foreground">
-          BarberHub Pro — <span className="font-semibold text-foreground">R$ 69,99/mês</span>
+          Trato Barber Pro — <span className="font-semibold text-foreground">R$ 69,99/mês</span>
           {periodEnds && <> · Próxima cobrança: {formatDateBR(periodEnds.toISOString().slice(0, 10))}</>}
         </p>
       )}
@@ -705,9 +705,9 @@ function ContaTab() {
     if (confirm !== "EXCLUIR") return;
     setSending(true);
     // Open mailto as fallback — backend deletion processed manually
-    const subject = encodeURIComponent("Solicitação de exclusão de conta — BarberHub");
+    const subject = encodeURIComponent("Solicitação de exclusão de conta — Trato Barber");
     const body = encodeURIComponent(
-      `Olá,\n\nSolicito a exclusão permanente da minha conta no BarberHub.\n\n` +
+      `Olá,\n\nSolicito a exclusão permanente da minha conta no Trato Barber.\n\n` +
       `E-mail: ${user?.email ?? ""}\n` +
       `Barbearia: ${barbershop?.name ?? ""}\n` +
       `ID: ${user?.id ?? ""}\n\n` +

@@ -297,7 +297,7 @@ function PublicBooking() {
             <LangToggle />
             <div className="flex items-center gap-2">
               <Logo size={28} />
-              <span className="font-display text-lg tracking-wider">BARBER<span className="text-gold">HUB</span></span>
+              <span className="font-display text-lg tracking-wider">TRATO <span className="text-gold">BARBER</span></span>
             </div>
           </div>
         </div>
