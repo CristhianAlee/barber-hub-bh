@@ -97,6 +97,8 @@ export const en: Record<TranslationKey, string> = {
   landing_footer_privacy: "Privacy",
   landing_footer_terms: "Terms of Service",
   landing_footer_email: "suportetratobarber@gmail.com",
+  support_email: "suportetratobarber@gmail.com",
+  developed_by: "Developed by",
 
   // ── Auth
   auth_login_title: "Sign in",

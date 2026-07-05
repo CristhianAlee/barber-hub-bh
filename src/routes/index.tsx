@@ -449,9 +449,22 @@ function Landing() {
               </Link>
             </nav>
 
-            <p className="text-center text-xs text-muted-foreground">
-              © {new Date().getFullYear()} Trato Barber — {t("landing_footer_rights")}
-            </p>
+            <div className="flex flex-col items-center gap-1 text-xs text-muted-foreground md:items-end">
+              <p className="text-center">
+                © {new Date().getFullYear()} Trato Barber — {t("landing_footer_rights")}
+              </p>
+              <p className="text-center">
+                {t("developed_by")}{" "}
+                <a
+                  href="https://mxsites.com.br"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gold transition hover:underline"
+                >
+                  MX Sites
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       </footer>

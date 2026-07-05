@@ -144,7 +144,18 @@ function TermosDeUso() {
       </main>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Trato Barber — Todos os direitos reservados
+        <p>© {new Date().getFullYear()} Trato Barber — Todos os direitos reservados</p>
+        <p className="mt-1">
+          Desenvolvido por{" "}
+          <a
+            href="https://mxsites.com.br"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gold hover:underline"
+          >
+            MX Sites
+          </a>
+        </p>
       </footer>
     </div>
   );

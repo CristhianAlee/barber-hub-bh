@@ -95,6 +95,8 @@ export const pt = {
   landing_footer_privacy: "Privacidade",
   landing_footer_terms: "Termos de Uso",
   landing_footer_email: "suportetratobarber@gmail.com",
+  support_email: "suportetratobarber@gmail.com",
+  developed_by: "Desenvolvido por",
 
   // ── Auth
   auth_login_title: "Entrar",
