@@ -1,6 +1,8 @@
 // CORS compartilhado pelas Edge Functions invocadas pelo frontend.
 // Restrito às origens conhecidas (produção + dev local) em vez de "*".
 const allowedOrigins = [
+  "https://tratobarber.com.br",
+  "https://www.tratobarber.com.br",
   "https://barber-hub-rho.vercel.app",
   "http://localhost:5173",
   "http://localhost:3000",
