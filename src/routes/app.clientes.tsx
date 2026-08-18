@@ -257,8 +257,8 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
     setSaving(true);
     const { error } = await supabase.from("clients").update({ notes }).eq("id", client.id);
     setSaving(false);
-    if (error) return toast.error("Erro ao salvar");
-    toast.success("Observações salvas");
+    if (error) return toast.error(t("err_save_generic"));
+    toast.success(t("clients_notes_saved"));
     onUpdated({ ...client, notes });
   };
 

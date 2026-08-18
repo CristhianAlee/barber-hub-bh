@@ -1,3 +1,5 @@
+import { useLanguage } from "@/hooks/useLanguage";
+
 // Logo servida de public/ (URL-safe). Trocar o arquivo em public/ atualiza tudo.
 const logo = "/trato-barber-logo.png";
 
@@ -10,11 +12,12 @@ export function Logo({
   showWordmark?: boolean;
   className?: string;
 }) {
+  const { t } = useLanguage();
   if (showWordmark) {
     return (
       <img
         src={logo}
-        alt="Trato Barber — Gestão Inteligente para Barbearias"
+        alt={t("logo_alt")}
         className={className}
         style={{ height: size, width: "auto" }}
       />

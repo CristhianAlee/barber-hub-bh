@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { passwordStrength } from "@/lib/format";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export const Route = createFileRoute("/auth/reset")({
   component: Reset,
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/auth/reset")({
 
 function Reset() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,10 +28,10 @@ function Reset() {
     const { error } = await supabase.auth.updateUser({ password: pw });
     setLoading(false);
     if (error) {
-      toast.error("Não foi possível redefinir. Solicite um novo link.");
+      toast.error(t("auth_reset_failed"));
       return;
     }
-    toast.success("Senha redefinida!");
+    toast.success(t("auth_password_reset_success"));
     await supabase.auth.signOut();
     navigate({ to: "/auth/login" });
   };

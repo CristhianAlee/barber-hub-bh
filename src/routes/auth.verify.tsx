@@ -6,6 +6,7 @@ import { Mail, CheckCircle2, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 
 export const Route = createFileRoute("/auth/verify")({
   component: Verify,
@@ -14,11 +15,12 @@ export const Route = createFileRoute("/auth/verify")({
 
 function Verify() {
   const { email } = Route.useSearch();
+  const { t } = useLanguage();
   const [resending, setResending] = useState(false);
   const [cooldown, setCooldown] = useState(0);
 
   const resend = async () => {
-    if (!email) return toast.error("E-mail não informado");
+    if (!email) return toast.error(t("auth_email_missing"));
     setResending(true);
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -30,7 +32,7 @@ function Verify() {
       console.error("[Verify] reenviar e-mail:", error);
       return toast.error(getFriendlyErrorMessage(error, "reenviar o e-mail"));
     }
-    toast.success("E-mail reenviado!");
+    toast.success(t("auth_email_resent"));
     setCooldown(30);
     const id = setInterval(() => {
       setCooldown((c) => {

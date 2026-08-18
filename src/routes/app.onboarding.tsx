@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,7 @@ function slugify(name: string): string {
 
 function Onboarding() {
   const { barbershop, refreshBarbershop, user } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -61,13 +63,13 @@ function Onboarding() {
     setLoading(true);
     await supabase.from("barbershops").update({ onboarded: true }).eq("id", barbershop.id);
     await refreshBarbershop();
-    toast.success("Tudo pronto!");
+    toast.success(t("onboard_all_set"));
     navigate({ to: "/app" });
   };
 
   const saveStep1 = async () => {
     if (!user) return;
-    if (!bsName.trim()) return toast.error("Informe o nome da barbearia");
+    if (!bsName.trim()) return toast.error(t("onboard_name_required"));
     setLoading(true);
     if (!barbershop) {
       const base = slugify(bsName) || "barbearia";
@@ -85,7 +87,7 @@ function Onboarding() {
       const { error } = await supabase
         .from("barbershops").update({ name: bsName, address: address || null }).eq("id", barbershop.id);
       setLoading(false);
-      if (error) return toast.error("Erro ao salvar");
+      if (error) return toast.error(t("err_save_generic"));
     }
     await refreshBarbershop();
     setStep(2);
@@ -105,7 +107,7 @@ function Onboarding() {
       const { error: bhErr } = await supabase
         .from("business_hours")
         .upsert(rows, { onConflict: "barbershop_id,day_of_week" });
-      if (bhErr) { setLoading(false); return toast.error("Erro ao salvar horários"); }
+      if (bhErr) { setLoading(false); return toast.error(t("onboard_hours_error")); }
       await supabase.from("barbershops")
         .update({ booking_interval_minutes: Number(interval) }).eq("id", barbershop.id);
       await refreshBarbershop();
@@ -122,7 +124,7 @@ function Onboarding() {
         barbershop_id: barbershop.id, name: profName.trim(),
       });
       setLoading(false);
-      if (error) return toast.error("Erro ao salvar profissional");
+      if (error) return toast.error(t("onboard_prof_save_error"));
     }
     setStep(4);
   };
@@ -139,7 +141,7 @@ function Onboarding() {
             duration_minutes: s.duration, price: s.price,
           })),
         );
-        if (error) { setLoading(false); return toast.error("Erro ao salvar serviços"); }
+        if (error) { setLoading(false); return toast.error(t("onboard_services_error")); }
       }
     }
     await finish();
@@ -177,7 +179,7 @@ function Onboarding() {
               </div>
               <div className="space-y-1.5">
                 <Label>Endereço</Label>
-                <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Rua, número, bairro, cidade" />
+                <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("onboard_address_placeholder")} />
               </div>
               <div className="flex justify-between pt-2">
                 {barbershop ? (
@@ -259,7 +261,7 @@ function Onboarding() {
               </p>
               <div className="space-y-1.5">
                 <Label>Nome do profissional</Label>
-                <Input value={profName} onChange={(e) => setProfName(e.target.value)} placeholder="Ex: João Silva" />
+                <Input value={profName} onChange={(e) => setProfName(e.target.value)} placeholder={t("onboard_prof_name_placeholder")} />
               </div>
               <div className="flex justify-between pt-2">
                 <Button variant="ghost" onClick={() => saveStep3(true)}>Pular</Button>
@@ -281,7 +283,7 @@ function Onboarding() {
               <div className="space-y-2">
                 {services.map((s, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2">
-                    <Input className="col-span-6" value={s.name} placeholder="Serviço"
+                    <Input className="col-span-6" value={s.name} placeholder={t("appt_service")}
                       onChange={(e) => { const c = [...services]; c[i].name = e.target.value; setServices(c); }} />
                     <Input className="col-span-3" type="number" value={s.duration}
                       onChange={(e) => { const c = [...services]; c[i].duration = Number(e.target.value); setServices(c); }} />

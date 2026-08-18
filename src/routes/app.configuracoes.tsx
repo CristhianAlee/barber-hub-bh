@@ -157,10 +157,10 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
   const onLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) return toast.error("Logo deve ter menos de 2 MB");
+    if (file.size > 2 * 1024 * 1024) return toast.error(t("settings_logo_too_big"));
     setPendingLogoFile(file);
     setLogoPreview(URL.createObjectURL(file));
-    toast.success("Logo carregada! Salve para confirmar.");
+    toast.success(t("settings_logo_uploaded"));
   };
 
   const save = async () => {
@@ -190,7 +190,7 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
       })
       .eq("id", barbershop.id);
     setSaving(false);
-    if (error) return toast.error("Erro ao salvar");
+    if (error) return toast.error(t("err_save_generic"));
     toast.success(t("settings_saved"));
     onSaved();
   };
@@ -308,8 +308,8 @@ function BusinessHours() {
     const { error } = await supabase
       .from("business_hours")
       .upsert(hours.map((h) => ({ ...h })), { onConflict: "barbershop_id,day_of_week" });
-    if (error) return toast.error("Erro ao salvar");
-    toast.success("Horários atualizados");
+    if (error) return toast.error(t("err_save_generic"));
+    toast.success(t("settings_hours_updated"));
   };
 
   if (loading) return <div className="text-sm text-muted-foreground">{t("loading")}</div>;
@@ -363,8 +363,8 @@ function ProfessionalsTab() {
   useEffect(() => { load(); }, [barbershop]); // eslint-disable-line
 
   const add = async () => {
-    if (!name.trim() || !barbershop) return toast.error("Informe o nome");
-    if (phone.replace(/\D/g, "").length < 10) return toast.error("Telefone obrigatório");
+    if (!name.trim() || !barbershop) return toast.error(t("settings_name_required"));
+    if (phone.replace(/\D/g, "").length < 10) return toast.error(t("settings_phone_required"));
     const parsedProf = professionalSchema.safeParse({ name, phone: phone.replace(/\D/g, "") });
     if (!parsedProf.success) return toast.error(parsedProf.error.errors[0].message);
     const { data: created, error } = await supabase
@@ -382,7 +382,7 @@ function ProfessionalsTab() {
         activeServices.map((s: any) => ({ barbershop_id: barbershop.id, professional_id: created.id, service_id: s.id }))
       );
     }
-    toast.success("Profissional adicionado");
+    toast.success(t("settings_prof_added"));
     setName(""); setPhone("");
     load();
   };
@@ -491,7 +491,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
       custom: false,
     };
     setHours(c);
-    toast.success("Dia restaurado para horário da barbearia");
+    toast.success(t("settings_day_restored"));
   };
 
   const toggleService = (id: string) => {
@@ -527,7 +527,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
         const { error: sErr } = await supabase.from("professional_services").insert(links);
         if (sErr) throw sErr;
       }
-      toast.success("Configurações salvas");
+      toast.success(t("settings_config_saved"));
       onClose();
     } catch (e: any) {
       console.error(e);
@@ -717,7 +717,7 @@ function ContaTab() {
     setSending(false);
     setOpen(false);
     setConfirm("");
-    toast.success("Solicitação enviada. Você receberá uma confirmação em até 2 dias úteis.");
+    toast.success(t("settings_request_sent"));
   };
 
   return (

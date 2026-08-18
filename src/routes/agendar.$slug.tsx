@@ -209,7 +209,7 @@ function PublicBooking() {
         });
       })?.id ?? "";
     }
-    if (!finalProfId) return toast.error("Nenhum profissional disponível");
+    if (!finalProfId) return toast.error(t("book_no_professional_available"));
 
     setSubmitting(true);
 
@@ -221,7 +221,7 @@ function PublicBooking() {
     if (clash.length > 0) {
       setSubmitting(false);
       setTime("");
-      return toast.error("Horário já ocupado, escolha outro");
+      return toast.error(t("err_slot_taken"));
     }
 
     const phoneDigits = onlyDigits(phone);
@@ -470,8 +470,8 @@ function PublicBooking() {
 
             <Button
               onClick={() => {
-                if (!date) return toast.error("Selecione uma data para continuar");
-                if (!time) return toast.error("Selecione um horário para continuar");
+                if (!date) return toast.error(t("book_select_date_continue"));
+                if (!time) return toast.error(t("book_select_time"));
                 setStep(4);
               }}
               className="mt-5 w-full bg-gradient-gold text-gold-foreground hover:opacity-90"
@@ -503,7 +503,7 @@ function PublicBooking() {
               </div>
               <div className="space-y-1.5">
                 <Label>{t("book_obs_opt")}</Label>
-                <Input value={notes} maxLength={500} onChange={(e) => { setNotes(e.target.value); clearError("notes"); }} placeholder="Ex: degradê alto" />
+                <Input value={notes} maxLength={500} onChange={(e) => { setNotes(e.target.value); clearError("notes"); }} placeholder={t("book_notes_placeholder")} />
                 {errors.notes && <p className="text-xs text-destructive">{errors.notes}</p>}
               </div>
 

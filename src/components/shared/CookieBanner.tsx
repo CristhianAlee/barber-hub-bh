@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { useLanguage } from "@/hooks/useLanguage";
 
 const KEY = "barberhub-cookie-consent";
 
 export function CookieBanner() {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -24,15 +26,15 @@ export function CookieBanner() {
     <div
       className="fixed inset-x-0 bottom-0 z-[9999] border-t border-gold/40 bg-card/95 backdrop-blur-sm animate-in slide-in-from-bottom-2 duration-300"
       role="dialog"
-      aria-label="Aviso de cookies"
+      aria-label={t("cookie_dialog_label")}
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 text-xl leading-none">🍪</span>
           <p className="text-sm text-muted-foreground">
-            Usamos cookies para manter sua sessão ativa e lembrar suas preferências. Ao continuar, você concorda com nossa{" "}
+            {t("cookie_text_pre")}{" "}
             <Link to="/privacidade" className="text-gold underline-offset-2 hover:underline">
-              Política de Privacidade
+              {t("cookie_privacy_link")}
             </Link>
             .
           </p>
@@ -44,19 +46,19 @@ export function CookieBanner() {
             className="text-muted-foreground hover:text-foreground"
             onClick={() => accept("essential-only")}
           >
-            Só essenciais
+            {t("cookie_essential_only")}
           </Button>
           <Button
             size="sm"
             className="bg-gradient-gold text-gold-foreground hover:opacity-90"
             onClick={() => accept("accepted")}
           >
-            Aceitar todos
+            {t("cookie_accept_all")}
           </Button>
           <button
             onClick={() => accept("essential-only")}
             className="ml-1 rounded p-1 text-muted-foreground transition hover:text-foreground"
-            aria-label="Fechar"
+            aria-label={t("cookie_close_label")}
           >
             <X className="h-4 w-4" />
           </button>

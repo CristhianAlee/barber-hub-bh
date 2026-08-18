@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { hasActiveAccess, redirectToCheckout, redirectToPortal } from "@/services/stripeService";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ function PaywallScreen({
   action: Action;
 }) {
   const [busy, setBusy] = useState(false);
+  const { t } = useLanguage();
 
   const onClick = async () => {
     setBusy(true);
@@ -31,7 +33,7 @@ function PaywallScreen({
       else await redirectToPortal();
     } catch (err) {
       setBusy(false);
-      toast.error(err instanceof Error ? err.message : "Tente novamente.");
+      toast.error(err instanceof Error ? err.message : t("err_try_again"));
     }
   };
 
@@ -54,7 +56,7 @@ function PaywallScreen({
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : cta}
         </Button>
-        <p className="mt-3 text-[11px] text-muted-foreground">🔒 Pagamento seguro via Stripe</p>
+        <p className="mt-3 text-[11px] text-muted-foreground">{t("paywall_secure_payment")}</p>
       </Card>
     </div>
   );
@@ -62,6 +64,7 @@ function PaywallScreen({
 
 export function PaywallGuard({ children }: { children: ReactNode }) {
   const { barbershop, loading } = useAuth();
+  const { t } = useLanguage();
 
   // Durante o carregamento ou sem barbearia, o app.tsx já trata
   // (spinner / redirect p/ onboarding). Não bloqueia aqui.
@@ -73,9 +76,9 @@ export function PaywallGuard({ children }: { children: ReactNode }) {
       return (
         <PaywallScreen
           icon={<AlertTriangle className="h-8 w-8" />}
-          title="Pagamento pendente"
-          desc="Não conseguimos processar sua última cobrança. Atualize sua forma de pagamento para continuar usando o Trato Barber Pro."
-          cta="Atualizar forma de pagamento"
+          title={t("paywall_pastdue_title")}
+          desc={t("paywall_pastdue_desc")}
+          cta={t("paywall_pastdue_cta")}
           action="portal"
         />
       );
@@ -83,9 +86,9 @@ export function PaywallGuard({ children }: { children: ReactNode }) {
       return (
         <PaywallScreen
           icon={<CalendarX className="h-8 w-8" />}
-          title="Assinatura cancelada"
-          desc="Sua assinatura foi cancelada. Reative quando quiser para voltar a ter acesso completo."
-          cta="Reativar assinatura"
+          title={t("paywall_canceled_title")}
+          desc={t("paywall_canceled_desc")}
+          cta={t("paywall_canceled_cta")}
           action="checkout"
         />
       );
@@ -94,9 +97,9 @@ export function PaywallGuard({ children }: { children: ReactNode }) {
       return (
         <PaywallScreen
           icon={<Lock className="h-8 w-8" />}
-          title="Seu teste grátis terminou"
-          desc="Assine o Trato Barber Pro por R$ 69,99/mês e continue com agendamento, financeiro, estoque e tudo mais."
-          cta="Assinar agora"
+          title={t("paywall_trial_title")}
+          desc={t("paywall_trial_desc")}
+          cta={t("paywall_trial_cta")}
           action="checkout"
         />
       );

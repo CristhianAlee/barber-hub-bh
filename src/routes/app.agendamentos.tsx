@@ -88,8 +88,8 @@ function AgendamentosPage() {
 
   const updateStatus = async (id: string, status: "pending" | "confirmed" | "completed" | "cancelled" | "no_show") => {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
-    if (error) return toast.error("Erro ao atualizar");
-    toast.success("Status atualizado");
+    if (error) return toast.error(t("err_update_generic"));
+    toast.success(t("appt_status_updated"));
     load();
   };
 
@@ -104,7 +104,7 @@ function AgendamentosPage() {
       const { data: c } = await supabase.from("clients").select("no_show_count").eq("id", a.client_id).maybeSingle();
       await supabase.from("clients").update({ no_show_count: (c?.no_show_count ?? 0) + 1 }).eq("id", a.client_id);
     }
-    toast.success("Marcado como falta");
+    toast.success(t("appt_marked_noshow"));
     load();
   };
 
@@ -428,7 +428,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
 
   const submit = async () => {
     if (!barbershop || !serviceId || !profId || !name.trim() || onlyDigits(phone).length < 10 || !time) {
-      toast.error("Preencha todos os campos");
+      toast.error(t("appt_fill_all_fields"));
       return;
     }
     const parsed = appointmentSchema.safeParse({
@@ -454,7 +454,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
       .neq("status", "cancelled");
     if (clash && clash.length > 0) {
       setSaving(false);
-      return toast.error("Horário já ocupado, escolha outro");
+      return toast.error(t("err_slot_taken"));
     }
 
     const phoneDigits = onlyDigits(phone);
@@ -474,7 +474,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
       if (cErr) {
         console.error("[NewAppt] erro cliente:", cErr);
         setSaving(false);
-        return toast.error("Erro ao salvar cliente");
+        return toast.error(t("appt_client_save_error"));
       }
       clientId = newClient.id;
     }
@@ -493,10 +493,10 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
     setSaving(false);
     if (error) {
       console.error("[NewAppt] erro agendamento:", error);
-      if (error.code === "23505") return toast.error("Horário já ocupado, escolha outro");
+      if (error.code === "23505") return toast.error(t("err_slot_taken"));
       return toast.error(getFriendlyErrorMessage(error, "salvar o agendamento"));
     }
-    toast.success("Agendamento criado");
+    toast.success(t("appt_created"));
     onCreated();
   };
 
@@ -654,7 +654,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
   }, [barbershop, nextDate, professionalHours, hours, appointment, busy]);
 
   const save = async () => {
-    if (!barbershop || !nextDate || !nextTime) return toast.error("Escolha data e horário");
+    if (!barbershop || !nextDate || !nextTime) return toast.error(t("appt_choose_date_time"));
     setSaving(true);
     const { data: clash } = await supabase
       .from("appointments")
@@ -667,7 +667,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
       .neq("id", appointment.id);
     if (clash && clash.length > 0) {
       setSaving(false);
-      return toast.error("Horário já ocupado, escolha outro");
+      return toast.error(t("err_slot_taken"));
     }
     const { error } = await supabase
       .from("appointments")
@@ -676,10 +676,10 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
     setSaving(false);
     if (error) {
       console.error("[Reschedule] erro:", error);
-      if (error.code === "23505") return toast.error("Horário já ocupado, escolha outro");
+      if (error.code === "23505") return toast.error(t("err_slot_taken"));
       return toast.error(getFriendlyErrorMessage(error, "reagendar"));
     }
-    toast.success("Agendamento reagendado");
+    toast.success(t("appt_rescheduled"));
     onDone();
   };
 

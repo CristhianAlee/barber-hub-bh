@@ -356,7 +356,7 @@ function CustosFixosTab() {
   const add = async () => {
     if (!barbershop) return;
     const a = Number(amount);
-    if (!name.trim() || !a || a <= 0) return toast.error("Preencha nome e valor");
+    if (!name.trim() || !a || a <= 0) return toast.error(t("fin_fill_name_value"));
     const parsed = fixedCostSchema.safeParse({ name, amount: a, due_day: Number(dueDay) });
     if (!parsed.success) return toast.error(parsed.error.errors[0].message);
     setSaving(true);
@@ -471,9 +471,9 @@ function EntryForm({ onDone }: { onDone: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    if (!barbershop) return toast.error("Barbearia não encontrada. Recarregue a página.");
+    if (!barbershop) return toast.error(t("err_barbershop_not_found"));
     const a = Number(amount);
-    if (!a || a <= 0) return toast.error("Valor inválido");
+    if (!a || a <= 0) return toast.error(t("fin_value_invalid"));
     const parsed = financialEntrySchema.safeParse({
       description: description || "",
       amount: a,

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,6 +31,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
   // (por RLS é sempre a dona do agendamento). Não dependemos da prop, que
   // pode vir sem barbershop_id dependendo da query do componente pai.
   const { barbershop } = useAuth();
+  const { t } = useLanguage();
   const [services, setServices] = useState<Service[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [extraServices, setExtraServices] = useState<Set<string>>(new Set());
@@ -64,7 +66,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
 
   const finalize = async () => {
     if (!barbershop) {
-      toast.error("Não foi possível identificar a barbearia. Recarregue a página.");
+      toast.error(t("err_barbershop_not_found"));
       return;
     }
     setSubmitting(true);
@@ -153,7 +155,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
         }).eq("id", appointment.client_id);
       }
 
-      toast.success(`Atendimento finalizado — ${brl(total)}`);
+      toast.success(`${t("checkout_success_prefix")} — ${brl(total)}`);
       onDone();
     } catch (err: any) {
       console.error("[Checkout] Erro inesperado:", err);
@@ -176,21 +178,21 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
   }
 
   const paymentOptions: { value: PaymentMethod; label: string }[] = [
-    { value: "cash", label: "Dinheiro" }, { value: "pix", label: "PIX" },
-    { value: "debit", label: "Débito" }, { value: "credit", label: "Crédito" },
+    { value: "cash", label: t("fin_payment_cash") }, { value: "pix", label: t("fin_payment_pix") },
+    { value: "debit", label: t("fin_payment_debit") }, { value: "credit", label: t("fin_payment_credit") },
   ];
 
   return (
     <div className="space-y-4">
       {/* Cliente */}
       <div className="rounded-lg border border-border bg-background/40 p-3 text-sm">
-        <div className="text-xs text-muted-foreground">Cliente</div>
+        <div className="text-xs text-muted-foreground">{t("checkout_client")}</div>
         <div className="font-medium">{appointment.clients?.name}</div>
       </div>
 
       {/* Serviço base */}
       <div>
-        <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Serviço agendado</div>
+        <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{t("checkout_base_service")}</div>
         <div className="flex items-center justify-between rounded-lg border border-gold/30 bg-gold/5 p-3">
           <div className="font-medium">{baseService?.name}</div>
           <div className="font-mono text-gold">{brl(Number(baseService?.price ?? 0))}</div>
@@ -200,7 +202,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       {/* Extra services */}
       {services.length > 0 && (
         <div>
-          <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">Adicionar serviços</div>
+          <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{t("checkout_extra")}</div>
           <div className="space-y-1.5">
             {services.map((s) => (
               <label key={s.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background/40 p-2.5 text-sm hover:border-gold/40">
@@ -225,7 +227,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
         <Card className="border-gold/40 bg-gradient-to-br from-gold/15 to-card p-4">
           <div className="mb-3 flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-gold" />
-            <h3 className="font-display text-lg tracking-wide text-gold">Aproveite e leve também:</h3>
+            <h3 className="font-display text-lg tracking-wide text-gold">{t("checkout_orderbump")}</h3>
           </div>
           <div className="space-y-2">
             {products.map((p) => {
@@ -238,7 +240,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
                   </div>
                   {q === 0 ? (
                     <Button size="sm" onClick={() => incProduct(p.id, 1)} className="bg-gold/20 text-gold hover:bg-gold/30">
-                      <Plus className="mr-1 h-3.5 w-3.5" />Adicionar
+                      <Plus className="mr-1 h-3.5 w-3.5" />{t("add")}
                     </Button>
                   ) : (
                     <div className="flex items-center gap-1">
@@ -256,7 +258,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
 
       {/* Pagamento */}
       <div>
-        <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground">Forma de pagamento</Label>
+        <Label className="mb-2 block text-xs uppercase tracking-wider text-muted-foreground">{t("checkout_payment")}</Label>
         <div className="grid grid-cols-4 gap-2">
           {paymentOptions.map((o) => (
             <button
@@ -274,7 +276,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
 
       {/* Total */}
       <div className="flex items-center justify-between rounded-lg border border-gold/40 bg-gold/10 p-4">
-        <span className="text-sm uppercase tracking-wider text-muted-foreground">Total</span>
+        <span className="text-sm uppercase tracking-wider text-muted-foreground">{t("checkout_total")}</span>
         <span className="font-mono text-2xl font-bold text-gold">{brl(total)}</span>
       </div>
 
@@ -284,7 +286,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
         className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
         size="lg"
       >
-        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Finalizar atendimento"}
+        {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : t("checkout_finalize")}
       </Button>
     </div>
   );

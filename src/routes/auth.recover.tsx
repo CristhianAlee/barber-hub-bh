@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
 import { toast } from "sonner";
+import { useLanguage } from "@/hooks/useLanguage";
 import { Loader2, MailCheck } from "lucide-react";
 
 export const Route = createFileRoute("/auth/recover")({
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/auth/recover")({
 });
 
 function Recover() {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
@@ -22,7 +24,7 @@ function Recover() {
     const { error } = await authService.resetPassword(email);
     setLoading(false);
     if (error) {
-      toast.error("Não foi possível enviar o e-mail");
+      toast.error(t("auth_recover_failed"));
       return;
     }
     setSent(true);

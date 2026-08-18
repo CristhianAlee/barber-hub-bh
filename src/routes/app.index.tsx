@@ -47,7 +47,7 @@ function Dashboard() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("checkout") === "success") {
-      toast.success("🎉 Assinatura ativada! Bem-vindo ao Trato Barber Pro!");
+      toast.success(t("dash_subscription_activated"));
       params.delete("checkout");
       const qs = params.toString();
       window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
@@ -87,7 +87,7 @@ function Dashboard() {
   // Faltou / Cancelar direto da pendência. "Concluir" abre o Checkout (setCheckout).
   const pendingAction = async (a: any, status: "no_show" | "cancelled") => {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
-    if (error) return toast.error("Não foi possível atualizar. Tente novamente.");
+    if (error) return toast.error(t("dash_update_failed"));
     if (status === "no_show" && a.client_id) {
       const { data: c } = await supabase.from("clients").select("no_show_count").eq("id", a.client_id).maybeSingle();
       await supabase.from("clients").update({ no_show_count: (c?.no_show_count ?? 0) + 1 }).eq("id", a.client_id);

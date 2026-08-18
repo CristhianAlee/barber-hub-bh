@@ -33,10 +33,10 @@ function Login() {
     const { error } = await supabase.auth.resend({ type: "signup", email });
     setResending(false);
     if (error) {
-      toast.error("Não foi possível reenviar o e-mail. Tente novamente.");
+      toast.error(t("auth_resend_failed"));
       return;
     }
-    toast.success("E-mail reenviado! Verifique sua caixa de entrada.");
+    toast.success(t("auth_email_resent_full"));
   };
 
   const handleGoogleLogin = async () => {
@@ -44,7 +44,7 @@ function Login() {
     const { error } = await authService.signInWithGoogle();
     if (error) {
       setGoogleLoading(false);
-      toast.error("Erro ao conectar com Google. Tente novamente.");
+      toast.error(t("auth_google_error"));
     }
   };
 
@@ -61,12 +61,12 @@ function Login() {
       if (error.includes("Email not confirmed")) {
         setNeedsConfirmation(true);
       }
-      const msg = error.includes("Invalid") ? "E-mail ou senha incorretos" : getFriendlyErrorMessage(error, "fazer login");
+      const msg = error.includes("Invalid") ? t("auth_invalid_credentials") : getFriendlyErrorMessage(error, "fazer login");
       setLoginError(msg);
       toast.error(msg);
       return;
     }
-    toast.success("Bem-vindo de volta!");
+    toast.success(t("auth_welcome_back"));
     navigate({ to: "/app" });
   };
 

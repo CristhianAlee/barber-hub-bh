@@ -243,8 +243,8 @@ function ProductForm({ onDone }: { onDone: () => void }) {
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    if (!barbershop) return toast.error("Barbearia não encontrada. Recarregue a página.");
-    if (!name.trim()) return toast.error("Nome obrigatório");
+    if (!barbershop) return toast.error(t("err_barbershop_not_found"));
+    if (!name.trim()) return toast.error(t("estoque_name_required"));
     const parsed = productSchema.safeParse({
       name,
       price: Number(price) || 0,
@@ -270,7 +270,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
       console.error("[Estoque] cadastrar produto:", error);
       return toast.error(getFriendlyErrorMessage(error, "salvar produto"));
     }
-    toast.success("Produto cadastrado");
+    toast.success(t("estoque_product_created"));
     onDone();
   };
 
@@ -308,16 +308,16 @@ function MovementForm({ product, onDone }: { product: Product; onDone: () => voi
 
   const submit = async () => {
     const q = Number(quantity);
-    if (!q || q < 1) return toast.error("Quantidade inválida");
+    if (!q || q < 1) return toast.error(t("estoque_qty_invalid"));
     setSaving(true);
     const newStock = type === "in" ? product.stock_quantity + q : product.stock_quantity - q;
-    if (newStock < 0) { setSaving(false); return toast.error("Estoque ficaria negativo"); }
+    if (newStock < 0) { setSaving(false); return toast.error(t("estoque_negative_stock")); }
     const { error: e1 } = await supabase.from("stock_movements").insert({ product_id: product.id, type, quantity: q, reason: reason || null });
     if (e1) { setSaving(false); console.error("[Estoque] movimento:", e1); return toast.error(getFriendlyErrorMessage(e1, "atualizar estoque")); }
     const { error: e2 } = await supabase.from("products").update({ stock_quantity: newStock }).eq("id", product.id);
     setSaving(false);
     if (e2) { console.error("[Estoque] atualizar saldo:", e2); return toast.error(getFriendlyErrorMessage(e2, "atualizar estoque")); }
-    toast.success("Movimentação registrada");
+    toast.success(t("estoque_movement_registered"));
     onDone();
   };
 

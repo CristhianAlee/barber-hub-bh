@@ -40,7 +40,7 @@ function Signup() {
     const { error } = await authService.signInWithGoogle();
     if (error) {
       setGoogleLoading(false);
-      toast.error("Erro ao conectar com Google. Tente novamente.");
+      toast.error(t("auth_google_error"));
     }
   };
 
@@ -51,10 +51,10 @@ function Signup() {
   const confirmError =
     form.confirm.length === 0
       ? triedSubmit
-        ? "Confirme sua senha"
+        ? t("auth_confirm_password_required")
         : ""
       : form.confirm !== form.password
-      ? "As senhas não coincidem"
+      ? t("auth_passwords_mismatch")
       : "";
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -77,7 +77,7 @@ function Signup() {
     });
     if (error) {
       setLoading(false);
-      toast.error(error.includes("already") ? "Este e-mail já está cadastrado" : "Erro ao criar conta");
+      toast.error(error.includes("already") ? t("auth_email_already_registered") : t("auth_signup_error"));
       return;
     }
     // Save LGPD consent record
@@ -92,7 +92,7 @@ function Signup() {
       }).select().maybeSingle();
     }
     setLoading(false);
-    toast.success("Conta criada! Verifique seu e-mail");
+    toast.success(t("auth_account_created"));
     navigate({ to: "/auth/verify", search: { email: form.email } });
   };
 
@@ -140,7 +140,7 @@ function Signup() {
             onChange={(e) => { setForm({ ...form, password: e.target.value }); clearError("password"); }}
             required
             minLength={8}
-            placeholder="Mínimo 8 caracteres"
+            placeholder={t("signup_password_placeholder")}
           />
           {form.password && (
             <div className="flex items-center gap-2">

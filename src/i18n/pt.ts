@@ -348,6 +348,98 @@ export const pt = {
   checkout_total: "Total",
   checkout_finalize: "Finalizar atendimento",
   checkout_title: "Finalizar atendimento",
+
+  // ── Mensagens de erro compartilhadas
+  err_barbershop_not_found: "Barbearia não encontrada. Recarregue a página.",
+  err_slot_taken: "Horário já ocupado, escolha outro.",
+  err_try_again: "Tente novamente.",
+
+  // ── Paywall
+  paywall_pastdue_title: "Pagamento pendente",
+  paywall_pastdue_desc: "Não conseguimos processar sua última cobrança. Atualize sua forma de pagamento para continuar usando o Trato Barber Pro.",
+  paywall_pastdue_cta: "Atualizar forma de pagamento",
+  paywall_canceled_title: "Assinatura cancelada",
+  paywall_canceled_desc: "Sua assinatura foi cancelada. Reative quando quiser para voltar a ter acesso completo.",
+  paywall_canceled_cta: "Reativar assinatura",
+  paywall_trial_title: "Seu teste grátis terminou",
+  paywall_trial_desc: "Assine o Trato Barber Pro por R$ 69,99/mês e continue com agendamento, financeiro, estoque e tudo mais.",
+  paywall_trial_cta: "Assinar agora",
+  paywall_secure_payment: "🔒 Pagamento seguro via Stripe",
+
+  // ── Cookie banner
+  cookie_dialog_label: "Aviso de cookies",
+  cookie_text_pre: "Usamos cookies para manter sua sessão ativa e lembrar suas preferências. Ao continuar, você concorda com nossa",
+  cookie_privacy_link: "Política de Privacidade",
+  cookie_essential_only: "Só essenciais",
+  cookie_accept_all: "Aceitar todos",
+  cookie_close_label: "Fechar",
+
+  // ── Checkout — mensagens
+  checkout_success_prefix: "Atendimento finalizado",
+
+  // ── Toasts diversos
+  estoque_name_required: "Nome obrigatório",
+  estoque_qty_invalid: "Quantidade inválida",
+  estoque_movement_registered: "Movimentação registrada",
+  clients_notes_saved: "Observações salvas",
+  onboard_hours_error: "Erro ao salvar horários",
+  onboard_services_error: "Erro ao salvar serviços",
+  book_no_professional_available: "Nenhum profissional disponível",
+  book_select_time: "Selecione um horário para continuar",
+  dash_update_failed: "Não foi possível atualizar. Tente novamente.",
+  auth_reset_failed: "Não foi possível redefinir. Solicite um novo link.",
+  auth_resend_failed: "Não foi possível reenviar o e-mail. Tente novamente.",
+  auth_email_missing: "E-mail não informado",
+  settings_hours_updated: "Horários atualizados",
+  settings_phone_required: "Telefone obrigatório",
+  settings_day_restored: "Dia restaurado para horário da barbearia",
+  settings_config_saved: "Configurações salvas",
+  settings_request_sent: "Solicitação enviada. Você receberá uma confirmação em até 2 dias úteis.",
+  auth_recover_failed: "Não foi possível enviar o e-mail",
+  appt_choose_date_time: "Escolha data e horário",
+  fin_value_invalid: "Valor inválido",
+
+  // ── Placeholders
+  signup_password_placeholder: "Mínimo 8 caracteres",
+  onboard_address_placeholder: "Rua, número, bairro, cidade",
+  onboard_prof_name_placeholder: "Ex: João Silva",
+  book_notes_placeholder: "Ex: degradê alto",
+
+  // ── Diversos
+  logo_alt: "Trato Barber — Gestão Inteligente para Barbearias",
+
+  // ── Toasts adicionais (segunda varredura)
+  err_save_generic: "Erro ao salvar",
+  err_update_generic: "Erro ao atualizar",
+  fin_fill_name_value: "Preencha nome e valor",
+  dash_subscription_activated: "🎉 Assinatura ativada! Bem-vindo ao Trato Barber Pro!",
+  book_select_date_continue: "Selecione uma data para continuar",
+  appt_status_updated: "Status atualizado",
+  appt_marked_noshow: "Marcado como falta",
+  appt_fill_all_fields: "Preencha todos os campos",
+  appt_client_save_error: "Erro ao salvar cliente",
+  appt_created: "Agendamento criado",
+  appt_rescheduled: "Agendamento reagendado",
+  estoque_product_created: "Produto cadastrado",
+  estoque_negative_stock: "Estoque ficaria negativo",
+  onboard_all_set: "Tudo pronto!",
+  onboard_name_required: "Informe o nome da barbearia",
+  onboard_prof_save_error: "Erro ao salvar profissional",
+  auth_google_error: "Erro ao conectar com Google. Tente novamente.",
+  auth_account_created: "Conta criada! Verifique seu e-mail",
+  auth_password_reset_success: "Senha redefinida!",
+  auth_email_resent: "E-mail reenviado!",
+  auth_email_resent_full: "E-mail reenviado! Verifique sua caixa de entrada.",
+  auth_welcome_back: "Bem-vindo de volta!",
+  settings_logo_too_big: "Logo deve ter menos de 2 MB",
+  settings_logo_uploaded: "Logo carregada! Salve para confirmar.",
+  settings_name_required: "Informe o nome",
+  settings_prof_added: "Profissional adicionado",
+  auth_invalid_credentials: "E-mail ou senha incorretos",
+  auth_confirm_password_required: "Confirme sua senha",
+  auth_passwords_mismatch: "As senhas não coincidem",
+  auth_email_already_registered: "Este e-mail já está cadastrado",
+  auth_signup_error: "Erro ao criar conta",
 };
 
 export type TranslationKey = keyof typeof pt;
