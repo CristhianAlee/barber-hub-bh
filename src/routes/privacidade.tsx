@@ -34,7 +34,7 @@ function PoliticaDePrivacidade() {
 
       <main className="mx-auto max-w-3xl px-6 py-16">
         <h1 className="font-display text-4xl tracking-wide md:text-5xl">Política de Privacidade</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Última atualização: junho de 2025</p>
+        <p className="mt-2 text-sm text-muted-foreground">Última atualização: agosto de 2026</p>
         <div className="mt-4 rounded-lg border border-border bg-card/50 p-4 text-[13px] text-muted-foreground">
           <strong className="text-foreground">Controlador dos dados (sua conta e uso da plataforma):</strong> Trato Barber<br />
           <strong className="text-foreground">Canal de atendimento (dados pessoais):</strong>{" "}
