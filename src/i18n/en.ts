@@ -500,4 +500,10 @@ export const en: Record<TranslationKey, string> = {
   auth_send_link_btn: "Send link",
   auth_remembered: "Remembered?",
   auth_back_to_login_2: "Back to login",
+
+  // ── LGPD (Phase 0.5)
+  book_consent_text: "By confirming, you agree that your data (name and phone) will be used to manage this appointment, including sending an automatic confirmation and reminder via WhatsApp. See our",
+  book_consent_link: "Privacy Policy",
+  footer_terms: "Terms",
+  footer_privacy: "Privacy",
 };

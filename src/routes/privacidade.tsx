@@ -36,11 +36,17 @@ function PoliticaDePrivacidade() {
         <h1 className="font-display text-4xl tracking-wide md:text-5xl">Política de Privacidade</h1>
         <p className="mt-2 text-sm text-muted-foreground">Última atualização: junho de 2025</p>
         <div className="mt-4 rounded-lg border border-border bg-card/50 p-4 text-[13px] text-muted-foreground">
-          <strong className="text-foreground">Controlador dos dados:</strong> Trato Barber<br />
-          <strong className="text-foreground">E-mail do DPO:</strong>{" "}
+          <strong className="text-foreground">Controlador dos dados (sua conta e uso da plataforma):</strong> Trato Barber<br />
+          <strong className="text-foreground">Canal de atendimento (dados pessoais):</strong>{" "}
           <a href="mailto:suportetratobarber@gmail.com" className="text-gold hover:underline">
             suportetratobarber@gmail.com
           </a>
+          <p className="mt-2 text-xs">
+            Para os dados dos clientes que você cadastra ao usar a plataforma
+            (agendamentos, telefone, histórico), o Trato Barber atua como
+            operador, e você — a barbearia — é o controlador. Veja detalhes
+            na seção 1 e 4 abaixo.
+          </p>
         </div>
 
         <div className="mt-10 space-y-8">
@@ -126,6 +132,13 @@ function PoliticaDePrivacidade() {
                   Política: <span className="text-gold">supabase.com/privacy</span>
                 </p>
               </div>
+              <div className="rounded-lg border border-border p-3">
+                <p className="font-medium text-foreground">Z-API (mensagens via WhatsApp)</p>
+                <p className="text-sm text-muted-foreground">
+                  Utilizado para enviar confirmações e lembretes automáticos de
+                  agendamento por WhatsApp ao número informado pelo cliente.
+                </p>
+              </div>
             </div>
             <p className="mt-3 text-muted-foreground">
               Não vendemos, alugamos ou compartilhamos seus dados com terceiros para fins comerciais.
@@ -179,12 +192,46 @@ function PoliticaDePrivacidade() {
               <li>Autenticação segura via Supabase Auth com tokens JWT e expiração automática</li>
               <li>Sem armazenamento de senhas em texto plano</li>
             </ul>
+            <p className="mt-3 text-muted-foreground">
+              Em caso de incidente de segurança que possa acarretar risco ou
+              dano relevante aos titulares, comunicaremos os titulares
+              afetados e a Autoridade Nacional de Proteção de Dados (ANPD),
+              conforme o art. 48 da LGPD, em prazo razoável a partir da
+              ciência do incidente.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              Se você identificar qualquer indício de incidente de segurança
+              envolvendo seus dados, entre em contato imediatamente pelo
+              e-mail{" "}
+              <a href="mailto:suportetratobarber@gmail.com" className="text-gold hover:underline">
+                suportetratobarber@gmail.com
+              </a>.
+            </p>
           </S>
 
           <S n="9" title="TRANSFERÊNCIA INTERNACIONAL">
             <p className="text-muted-foreground">
-              Seus dados são processados em servidores localizados no Brasil (sa-east-1 / São Paulo)
-              pelo Supabase, em conformidade com a LGPD.
+              Os dados de cadastro e agendamento são processados em servidores
+              localizados no Brasil (sa-east-1 / São Paulo), via Supabase, em
+              conformidade com a LGPD.
+            </p>
+            <p className="mt-2 text-muted-foreground">
+              Alguns dados podem ser transferidos para fora do Brasil quando
+              processados por parceiros internacionais essenciais ao serviço:
+            </p>
+            <ul className="ml-4 mt-2 list-disc space-y-1 text-muted-foreground">
+              <li>
+                Dados de pagamento são processados pela Stripe, empresa sediada
+                nos Estados Unidos, sob certificação PCI DSS Nível 1.
+              </li>
+              <li>
+                Mensagens automáticas de WhatsApp podem trafegar por
+                infraestrutura internacional operada pela Meta/WhatsApp.
+              </li>
+            </ul>
+            <p className="mt-2 text-muted-foreground">
+              Essas transferências ocorrem apenas na medida necessária para a
+              prestação do serviço contratado.
             </p>
           </S>
 

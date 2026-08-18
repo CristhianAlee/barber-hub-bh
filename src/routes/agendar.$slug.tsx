@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabasePublic } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -518,8 +518,10 @@ function PublicBooking() {
               </div>
 
               <p className="rounded-md bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                Ao confirmar, você concorda que seus dados (nome e telefone) serão usados exclusivamente
-                para gerenciar este agendamento.
+                {t("book_consent_text")}{" "}
+                <Link to="/privacidade" target="_blank" className="text-gold hover:underline">
+                  {t("book_consent_link")}
+                </Link>
               </p>
               <Button
                 onClick={submit}

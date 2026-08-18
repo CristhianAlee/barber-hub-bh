@@ -498,6 +498,12 @@ export const pt = {
   auth_send_link_btn: "Enviar link",
   auth_remembered: "Lembrou?",
   auth_back_to_login_2: "Voltar ao login",
+
+  // ── LGPD (Fase 0.5)
+  book_consent_text: "Ao confirmar, você concorda que seus dados (nome e telefone) serão usados para gerenciar este agendamento, incluindo o envio de confirmação e lembrete automático por WhatsApp. Consulte a",
+  book_consent_link: "Política de Privacidade",
+  footer_terms: "Termos",
+  footer_privacy: "Privacidade",
 };
 
 export type TranslationKey = keyof typeof pt;

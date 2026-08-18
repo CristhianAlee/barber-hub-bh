@@ -141,6 +141,15 @@ export function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
 
         {/* Suporte + crédito de desenvolvimento (discreto) */}
         <div className="space-y-0.5 pt-1 text-center text-[10px] text-muted-foreground/70">
+          <div className="flex justify-center gap-2">
+            <Link to="/termos" target="_blank" className="hover:text-gold">
+              {t("footer_terms")}
+            </Link>
+            <span>·</span>
+            <Link to="/privacidade" target="_blank" className="hover:text-gold">
+              {t("footer_privacy")}
+            </Link>
+          </div>
           <a
             href="mailto:suportetratobarber@gmail.com"
             className="block truncate transition hover:text-gold"
