@@ -160,7 +160,7 @@ function Signup() {
                   />
                 ))}
               </div>
-              <span className="text-xs text-muted-foreground">{ps.label}</span>
+              <span className="text-xs text-muted-foreground">{t(ps.labelKey)}</span>
             </div>
           )}
           {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}

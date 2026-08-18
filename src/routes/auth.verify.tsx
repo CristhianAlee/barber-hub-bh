@@ -47,14 +47,14 @@ function Verify() {
       <div className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-gold/10 text-gold">
         <Mail className="h-8 w-8" />
       </div>
-      <h1 className="font-display text-2xl tracking-wide">Verifique seu e-mail</h1>
+      <h1 className="font-display text-2xl tracking-wide">{t("auth_check_email_title")}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Enviamos um link de confirmação para
-        {email ? <> <span className="text-foreground">{email}</span></> : " seu e-mail"}.
-        Clique no link para ativar sua conta.
+        {t("auth_verify_sent_prefix")}
+        {email ? <> <span className="text-foreground">{email}</span></> : t("auth_verify_fallback_email")}.
+        {t("auth_verify_click_link")}
       </p>
       <div className="mt-5 flex items-center justify-center gap-2 rounded-md border border-border bg-background/40 p-3 text-xs text-muted-foreground">
-        <CheckCircle2 className="h-4 w-4 text-success" /> Após confirmar, faça login para acessar o painel.
+        <CheckCircle2 className="h-4 w-4 text-success" /> {t("auth_verify_after_confirm")}
       </div>
       <Button
         variant="outline"
@@ -62,10 +62,10 @@ function Verify() {
         disabled={resending || cooldown > 0 || !email}
         className="mt-5 w-full"
       >
-        {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : cooldown > 0 ? `Reenviar em ${cooldown}s` : "Reenviar e-mail"}
+        {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : cooldown > 0 ? `${t("auth_resend_countdown_prefix")} ${cooldown}s` : t("auth_resend_email_btn")}
       </Button>
       <Button asChild className="mt-2 w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
-        <Link to="/auth/login">Ir para login</Link>
+        <Link to="/auth/login">{t("auth_go_to_login")}</Link>
       </Button>
     </Card>
   );

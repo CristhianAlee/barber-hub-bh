@@ -1,3 +1,5 @@
+import type { TranslationKey } from "@/i18n/pt";
+
 export const brl = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
 
@@ -34,13 +36,16 @@ export function copyToClipboard(text: string): void {
   }
 }
 
-export const passwordStrength = (pw: string): { score: number; label: string } => {
+export const passwordStrength = (pw: string): { score: number; labelKey: TranslationKey } => {
   let score = 0;
   if (pw.length >= 8) score++;
   if (pw.length >= 12) score++;
   if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
   if (/\d/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const labels = ["Muito fraca", "Fraca", "Razoável", "Boa", "Forte", "Excelente"];
-  return { score, label: labels[score] };
+  const labelKeys: TranslationKey[] = [
+    "password_strength_1", "password_strength_2", "password_strength_3",
+    "password_strength_4", "password_strength_5", "password_strength_6",
+  ];
+  return { score, labelKey: labelKeys[score] };
 };

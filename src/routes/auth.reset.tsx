@@ -38,20 +38,20 @@ function Reset() {
 
   return (
     <div>
-      <h1 className="font-display text-3xl tracking-wide">Nova senha</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Defina uma senha forte para sua conta</p>
+      <h1 className="font-display text-3xl tracking-wide">{t("auth_new_password_title")}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">{t("auth_new_password_sub")}</p>
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="pw">Nova senha</Label>
+          <Label htmlFor="pw">{t("auth_new_password_label")}</Label>
           <Input id="pw" type="password" required minLength={8} value={pw} onChange={(e) => setPw(e.target.value)} />
-          {pw && <p className="text-xs text-muted-foreground">Força: {ps.label}</p>}
+          {pw && <p className="text-xs text-muted-foreground">{t("auth_strength_prefix")} {t(ps.labelKey)}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="cf">Confirmar</Label>
+          <Label htmlFor="cf">{t("confirm")}</Label>
           <Input id="cf" type="password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         </div>
         <Button type="submit" disabled={loading || pw.length < 8 || pw !== confirm} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Redefinir senha"}
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("auth_reset_password_btn")}
         </Button>
       </form>
     </div>

@@ -17,8 +17,6 @@ export const Route = createFileRoute("/app/onboarding")({
   component: Onboarding,
 });
 
-const DAYS_PT = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-
 function slugify(name: string): string {
   return name
     .toLowerCase()
@@ -32,6 +30,10 @@ function Onboarding() {
   const { barbershop, refreshBarbershop, user } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const dayKeys = [
+    "day_sun_short", "day_mon_short", "day_tue_short", "day_wed_short",
+    "day_thu_short", "day_fri_short", "day_sat_short",
+  ] as const;
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
@@ -153,9 +155,9 @@ function Onboarding() {
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo size={56} />
           <h1 className="mt-3 font-display text-3xl tracking-wide md:text-4xl">
-            Bem-vindo ao <span className="text-gold">Trato Barber</span>
+            {t("onboard_welcome_prefix")} <span className="text-gold">Trato Barber</span>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Configure sua barbearia em 4 passos rápidos</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("onboard_subtitle")}</p>
         </div>
 
         <div className="mb-6 flex items-center justify-center gap-2">
@@ -171,22 +173,22 @@ function Onboarding() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-gold">
                 <Store className="h-5 w-5" />
-                <span className="font-display text-xl tracking-wide">Sua barbearia</span>
+                <span className="font-display text-xl tracking-wide">{t("onboard_step1_heading")}</span>
               </div>
               <div className="space-y-1.5">
-                <Label>Nome da barbearia</Label>
+                <Label>{t("auth_bname")}</Label>
                 <Input value={bsName} onChange={(e) => setBsName(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Endereço</Label>
+                <Label>{t("address")}</Label>
                 <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t("onboard_address_placeholder")} />
               </div>
               <div className="flex justify-between pt-2">
                 {barbershop ? (
-                  <Button variant="ghost" onClick={() => setStep(2)}>Pular por agora</Button>
+                  <Button variant="ghost" onClick={() => setStep(2)}>{t("onboard_skip_for_now")}</Button>
                 ) : <div />}
                 <Button onClick={saveStep1} disabled={loading || !bsName.trim()} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Próximo"}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("next")}
                 </Button>
               </div>
             </div>
@@ -197,24 +199,24 @@ function Onboarding() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-gold">
                 <Clock className="h-5 w-5" />
-                <span className="font-display text-xl tracking-wide">Horários e agendamento</span>
+                <span className="font-display text-xl tracking-wide">{t("onboard_step2_heading")}</span>
               </div>
               <div className="space-y-1.5">
-                <Label>Intervalo entre agendamentos</Label>
+                <Label>{t("settings_interval")}</Label>
                 <Select value={interval} onValueChange={setInterval}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="15">15 minutos</SelectItem>
-                    <SelectItem value="30">30 minutos</SelectItem>
-                    <SelectItem value="45">45 minutos</SelectItem>
-                    <SelectItem value="60">1 hora</SelectItem>
+                    <SelectItem value="15">{t("onboard_interval_15")}</SelectItem>
+                    <SelectItem value="30">{t("onboard_interval_30")}</SelectItem>
+                    <SelectItem value="45">{t("onboard_interval_45")}</SelectItem>
+                    <SelectItem value="60">{t("onboard_interval_60")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Dias de atendimento</Label>
+                <Label>{t("onboard_days_label")}</Label>
                 <div className="flex flex-wrap gap-2">
-                  {DAYS_PT.map((d, i) => (
+                  {dayKeys.map((key, i) => (
                     <button
                       key={i}
                       type="button"
@@ -225,25 +227,25 @@ function Onboarding() {
                           : "border-border text-muted-foreground hover:border-gold/30"
                       }`}
                     >
-                      {d}
+                      {t(key)}
                     </button>
                   ))}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label>Abre às</Label>
+                  <Label>{t("onboard_opens_at")}</Label>
                   <Input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Fecha às</Label>
+                  <Label>{t("onboard_closes_at")}</Label>
                   <Input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} />
                 </div>
               </div>
               <div className="flex justify-between pt-2">
-                <Button variant="ghost" onClick={() => saveStep2(true)}>Pular</Button>
+                <Button variant="ghost" onClick={() => saveStep2(true)}>{t("onboard_skip")}</Button>
                 <Button onClick={() => saveStep2(false)} disabled={loading || openDays.length === 0} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Próximo"}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("next")}
                 </Button>
               </div>
             </div>
@@ -254,19 +256,19 @@ function Onboarding() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-gold">
                 <User className="h-5 w-5" />
-                <span className="font-display text-xl tracking-wide">Profissional</span>
+                <span className="font-display text-xl tracking-wide">{t("onboard_step3_heading")}</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Adicione um profissional (pode ser você mesmo). Você pode adicionar mais depois.
+                {t("onboard_prof_helper")}
               </p>
               <div className="space-y-1.5">
-                <Label>Nome do profissional</Label>
+                <Label>{t("onboard_prof_name_label")}</Label>
                 <Input value={profName} onChange={(e) => setProfName(e.target.value)} placeholder={t("onboard_prof_name_placeholder")} />
               </div>
               <div className="flex justify-between pt-2">
-                <Button variant="ghost" onClick={() => saveStep3(true)}>Pular</Button>
+                <Button variant="ghost" onClick={() => saveStep3(true)}>{t("onboard_skip")}</Button>
                 <Button onClick={() => saveStep3(false)} disabled={loading} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Próximo"}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : t("next")}
                 </Button>
               </div>
             </div>
@@ -277,9 +279,9 @@ function Onboarding() {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-gold">
                 <Scissors className="h-5 w-5" />
-                <span className="font-display text-xl tracking-wide">Serviços</span>
+                <span className="font-display text-xl tracking-wide">{t("onboard_step4_heading")}</span>
               </div>
-              <p className="text-sm text-muted-foreground">Sugerimos os clássicos. Edite ou apague o que quiser.</p>
+              <p className="text-sm text-muted-foreground">{t("onboard_services_helper")}</p>
               <div className="space-y-2">
                 {services.map((s, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2">
@@ -292,15 +294,15 @@ function Onboarding() {
                   </div>
                 ))}
                 <div className="grid grid-cols-12 gap-2 text-xs text-muted-foreground">
-                  <div className="col-span-6">Nome</div>
-                  <div className="col-span-3">Min</div>
+                  <div className="col-span-6">{t("name")}</div>
+                  <div className="col-span-3">{t("minute")}</div>
                   <div className="col-span-3">R$</div>
                 </div>
               </div>
               <div className="flex justify-between pt-2">
-                <Button variant="ghost" onClick={() => saveStep4(true)} disabled={loading}>Pular</Button>
+                <Button variant="ghost" onClick={() => saveStep4(true)} disabled={loading}>{t("onboard_skip")}</Button>
                 <Button onClick={() => saveStep4(false)} disabled={loading} className="bg-gradient-gold text-gold-foreground hover:opacity-90">
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> Concluir</>}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-2 h-4 w-4" /> {t("onboard_finish")}</>}
                 </Button>
               </div>
             </div>
