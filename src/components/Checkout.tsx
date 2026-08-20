@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { brl } from "@/lib/format";
+import { brl, formatDateISO } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 import { Loader2, Sparkles, Plus, X } from "lucide-react";
 import { toast } from "sonner";
@@ -87,7 +87,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       if (saleErr || !sale) {
         console.error("[Checkout] Falha ao criar venda:", saleErr);
         setSubmitting(false);
-        return toast.error(getFriendlyErrorMessage(saleErr, "finalizar atendimento"));
+        return toast.error(getFriendlyErrorMessage(saleErr, t, "err_action_finish_service"));
       }
 
       // 2. Create sale_items
@@ -114,10 +114,10 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       const { error: finErr } = await supabase.from("financial_entries").insert({
         barbershop_id: barbershop.id,
         type: "income",
-        category: "Atendimento",
-        description: `${appointment.clients?.name ?? "Cliente"} — ${baseService?.name ?? ""}`,
+        category: t("checkout_category_default"),
+        description: `${appointment.clients?.name ?? t("checkout_client_fallback")} — ${baseService?.name ?? ""}`,
         amount: total,
-        date: new Date().toISOString().slice(0, 10),
+        date: formatDateISO(new Date()),
         payment_method: payment,
         sale_id: sale.id,
       });
@@ -132,7 +132,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
               .update({ stock_quantity: p.stock_quantity - q }).eq("id", p.id);
             if (stockErr) console.error("[Checkout] Falha ao baixar estoque:", stockErr);
             await supabase.from("stock_movements").insert({
-              product_id: p.id, type: "out", quantity: q, reason: "Venda no atendimento",
+              product_id: p.id, type: "out", quantity: q, reason: t("checkout_stock_reason"),
             });
           }
         })
@@ -159,7 +159,7 @@ export function Checkout({ appointment, onDone }: { appointment: Appt; onDone: (
       onDone();
     } catch (err: any) {
       console.error("[Checkout] Erro inesperado:", err);
-      toast.error(getFriendlyErrorMessage(err, "finalizar atendimento"));
+      toast.error(getFriendlyErrorMessage(err, t, "err_action_finish_service"));
     } finally {
       setSubmitting(false);
     }

@@ -1,46 +1,57 @@
+import type { TranslationKey } from "@/i18n/pt";
+
 interface SupabaseError {
   code?: string;
   message?: string;
 }
 
+const KNOWN_ERROR_KEYS: Record<string, TranslationKey> = {
+  "23505": "err_slot_taken",
+  "42501": "err_no_permission",
+  "23503": "err_related_not_found",
+  "23502": "appt_fill_all_fields",
+  "22P02": "err_invalid_data",
+  PGRST116: "err_record_not_found",
+  PGRST301: "err_session_expired",
+};
+
 /**
- * Traduz erros técnicos (Postgres/Supabase/rede) em mensagens amigáveis
- * em português. NUNCA retorna a mensagem técnica bruta — o erro completo
- * deve ser logado com console.error antes de chamar esta função.
+ * Traduz erros técnicos (Postgres/Supabase/rede) em mensagens amigáveis,
+ * localizadas via t(). NUNCA retorna a mensagem técnica bruta — o erro
+ * completo deve ser logado com console.error antes de chamar esta função.
+ *
+ * `t` é passado pelo chamador (função utilitária pura, sem acesso ao
+ * hook useLanguage). `actionKey` é uma TranslationKey de ação no
+ * infinitivo (ex: "err_action_save_product") usada no fallback genérico
+ * "Não foi possível {ação}." / "Couldn't {action}.".
  */
-export function getFriendlyErrorMessage(err: unknown, context?: string): string {
+export function getFriendlyErrorMessage(
+  err: unknown,
+  t: (key: TranslationKey) => string,
+  actionKey?: TranslationKey,
+): string {
   const error = err as SupabaseError;
   const code = error?.code;
   const message = error?.message ?? "";
 
-  const knownErrors: Record<string, string> = {
-    "23505": "Este horário já está ocupado. Escolha outro horário.",
-    "42501": "Você não tem permissão para realizar esta ação.",
-    "23503": "Não foi possível completar — registro relacionado não encontrado.",
-    "23502": "Preencha todos os campos obrigatórios.",
-    "22P02": "Dados inválidos. Verifique as informações e tente novamente.",
-    PGRST116: "Registro não encontrado.",
-    PGRST301: "Sessão expirada. Faça login novamente.",
-  };
-
-  if (code && knownErrors[code]) {
-    return knownErrors[code];
+  if (code && KNOWN_ERROR_KEYS[code]) {
+    return t(KNOWN_ERROR_KEYS[code]);
   }
 
   if (message.includes("appointments_no_double_booking")) {
-    return "Este horário já está ocupado. Escolha outro horário.";
+    return t("err_slot_taken");
   }
   if (message.includes("Email not confirmed")) {
-    return "Confirme seu e-mail antes de fazer login. Verifique sua caixa de entrada.";
+    return t("err_email_not_confirmed");
   }
   if (message.includes("JWT") || message.includes("token")) {
-    return "Sessão expirada. Faça login novamente.";
+    return t("err_session_expired");
   }
   if (message.includes("Failed to fetch") || message.includes("NetworkError")) {
-    return "Erro de conexão. Verifique sua internet e tente novamente.";
+    return t("err_network");
   }
 
-  return context
-    ? `Não foi possível ${context}. Tente novamente.`
-    : "Não foi possível completar. Tente novamente.";
+  return actionKey
+    ? t("err_could_not_template").replace("{action}", t(actionKey))
+    : t("err_generic_fallback");
 }

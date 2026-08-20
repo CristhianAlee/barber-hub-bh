@@ -32,8 +32,9 @@ function PaywallScreen({
       if (action === "checkout") await redirectToCheckout();
       else await redirectToPortal();
     } catch (err) {
+      console.error("[PaywallGuard]", err);
       setBusy(false);
-      toast.error(err instanceof Error ? err.message : t("err_try_again"));
+      toast.error(t("err_try_again"));
     }
   };
 

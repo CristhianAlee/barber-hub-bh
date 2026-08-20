@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
 import { supabase } from "@/lib/supabase";
-import { brl, copyToClipboard } from "@/lib/format";
+import { brl, copyToClipboard, formatDateISO, formatWeekdayShort, formatDateShortNumeric } from "@/lib/format";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,16 +32,9 @@ type Stats = {
 
 type ChartPoint = { day: string; thisWeek: number; prevWeek: number };
 
-const fmtD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${dd}`;
-};
-
 function Dashboard() {
   const { barbershop, refreshBarbershop } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Pós-checkout: confirma a ativação e atualiza os dados da barbearia.
   useEffect(() => {
@@ -67,7 +60,7 @@ function Dashboard() {
 
   const loadPending = async () => {
     if (!barbershop) return;
-    const today = fmtD(new Date());
+    const today = formatDateISO(new Date());
     const { data } = await supabase
       .from("appointments")
       .select("id, date, time, status, barbershop_id, client_id, professional_id, service_id, clients(name), services(name, price), professionals(name)")
@@ -92,22 +85,22 @@ function Dashboard() {
       const { data: c } = await supabase.from("clients").select("no_show_count").eq("id", a.client_id).maybeSingle();
       await supabase.from("clients").update({ no_show_count: (c?.no_show_count ?? 0) + 1 }).eq("id", a.client_id);
     }
-    toast.success(status === "no_show" ? "Marcado como falta" : "Agendamento cancelado");
+    toast.success(status === "no_show" ? t("appt_marked_noshow") : t("dash_appt_cancelled"));
     loadPending();
   };
 
   useEffect(() => {
     if (!barbershop) return;
     (async () => {
-      const today = fmtD(new Date());
+      const today = formatDateISO(new Date());
       const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
-      const thirtyDaysAgo = fmtD(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+      const thirtyDaysAgo = formatDateISO(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
 
       // Build 14-day date array (index 0 = 13 days ago, index 13 = today)
       const dates14: string[] = [];
       for (let i = 13; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
-        dates14.push(fmtD(d));
+        dates14.push(formatDateISO(d));
       }
       const date14ago = new Date(); date14ago.setDate(date14ago.getDate() - 14);
 
@@ -118,7 +111,7 @@ function Dashboard() {
           supabase.from("clients").select("id").eq("barbershop_id", barbershop.id).gte("created_at", monthStart.toISOString()),
           supabase.from("products").select("id, stock_quantity, min_stock_alert").eq("barbershop_id", barbershop.id),
           supabase.from("appointments").select("id, time, status, clients(name), services(name, price), professionals(name)").eq("barbershop_id", barbershop.id).eq("date", today).order("time").limit(5),
-          supabase.from("financial_entries").select("date, amount").eq("barbershop_id", barbershop.id).gte("date", fmtD(date14ago)).eq("type", "income"),
+          supabase.from("financial_entries").select("date, amount").eq("barbershop_id", barbershop.id).gte("date", formatDateISO(date14ago)).eq("type", "income"),
           supabase.from("clients").select("id, last_visit").eq("barbershop_id", barbershop.id),
         ]);
 
@@ -140,7 +133,7 @@ function Dashboard() {
       }
       setChartData(
         dates14.slice(7).map((date, i) => ({
-          day: new Date(date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "short" }).slice(0, 3),
+          day: formatWeekdayShort(new Date(date + "T12:00:00"), language),
           thisWeek: byDate[date] ?? 0,
           prevWeek: byDate[dates14[i]] ?? 0,
         }))
@@ -154,7 +147,7 @@ function Dashboard() {
 
       setLoading(false);
     })();
-  }, [barbershop]);
+  }, [barbershop, language]);
 
   const publicUrl =
     typeof window !== "undefined" && barbershop
@@ -166,7 +159,7 @@ function Dashboard() {
     confirmed: { label: () => t("appt_status_confirmed"), cls: "bg-gold/15 text-gold border-gold/30" },
     completed: { label: () => t("appt_status_completed"), cls: "bg-success/15 text-success border-success/30" },
     cancelled: { label: () => t("appt_status_cancelled"), cls: "bg-destructive/15 text-destructive border-destructive/30" },
-    no_show: { label: () => "Não compareceu", cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+    no_show: { label: () => t("appt_status_noshow"), cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
   };
 
   return (
@@ -243,7 +236,7 @@ function Dashboard() {
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 shrink-0 text-amber-500" />
             <div className="text-sm font-semibold text-amber-600 dark:text-amber-400">
-              {pendingPast.length} agendamento{pendingPast.length > 1 ? "s" : ""} passado{pendingPast.length > 1 ? "s" : ""} sem confirmação
+              {pendingPast.length} {t(pendingPast.length > 1 ? "dash_pending_suffix_many" : "dash_pending_suffix_one")}
             </div>
           </div>
           <div className="mt-3 space-y-2">
@@ -252,18 +245,18 @@ function Dashboard() {
                 <div className="min-w-0 flex-1">
                   <div className="truncate font-medium">{a.clients?.name}</div>
                   <div className="truncate text-xs text-muted-foreground">
-                    {a.services?.name} • {new Date(a.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} {a.time?.slice(0, 5)}
+                    {a.services?.name} • {formatDateShortNumeric(a.date, language)} {a.time?.slice(0, 5)}
                   </div>
                 </div>
                 <div className="flex gap-1.5">
                   <Button size="sm" className="h-7 bg-success text-success-foreground hover:opacity-90" onClick={() => setCheckout(a)}>
-                    Concluir
+                    {t("appt_complete")}
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 border-amber-500/40 text-amber-500 hover:bg-amber-500/10" onClick={() => pendingAction(a, "no_show")}>
-                    Faltou
+                    {t("appt_noshow_btn")}
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 border-destructive/40 text-destructive hover:bg-destructive/10" onClick={() => pendingAction(a, "cancelled")}>
-                    Cancelar
+                    {t("cancel")}
                   </Button>
                 </div>
               </div>
@@ -271,7 +264,7 @@ function Dashboard() {
           </div>
           {pendingPast.length > 5 && (
             <Link to="/app/agendamentos" className="mt-3 inline-block text-xs font-medium text-amber-600 hover:underline dark:text-amber-400">
-              + ver todos ({pendingPast.length})
+              + {t("dash_view_all")} ({pendingPast.length})
             </Link>
           )}
         </div>

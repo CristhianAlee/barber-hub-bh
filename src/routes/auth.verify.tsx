@@ -30,7 +30,7 @@ function Verify() {
     setResending(false);
     if (error) {
       console.error("[Verify] reenviar e-mail:", error);
-      return toast.error(getFriendlyErrorMessage(error, "reenviar o e-mail"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_resend_email"));
     }
     toast.success(t("auth_email_resent"));
     setCooldown(30);

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { useLanguage } from "@/hooks/useLanguage";
+import type { TranslationKey } from "@/i18n/pt";
 import { supabase } from "@/lib/supabase";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,7 +20,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Copy, ImagePlus, Loader2, Plus, Settings, Trash2 } from "lucide-react";
 import { brl, copyToClipboard, formatPhone, formatDateBR } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
-import { barbershopSettingsSchema, professionalSchema, serviceSchema } from "@/lib/validationSchemas";
+import { createBarbershopSettingsSchema, createProfessionalSchema, createServiceSchema } from "@/lib/validationSchemas";
 import { redirectToCheckout, redirectToPortal } from "@/services/stripeService";
 import { storageService } from "@/services/storageService";
 
@@ -27,7 +28,10 @@ export const Route = createFileRoute("/app/configuracoes")({
   component: Configuracoes,
 });
 
-const DAYS_PT = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+const DAY_KEYS: TranslationKey[] = [
+  "settings_day_sun", "settings_day_mon", "settings_day_tue", "settings_day_wed",
+  "settings_day_thu", "settings_day_fri", "settings_day_sat",
+];
 
 /* ── Custom time picker (replaces native input type="time") */
 function TimeSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
@@ -112,7 +116,7 @@ function Configuracoes() {
             horarios: t("settings_tab_hours"),
             profissionais: t("settings_tab_professionals"),
             servicos: t("settings_tab_services"),
-            conta: "Minha Conta",
+            conta: t("settings_tab_account"),
           };
           return (
             <button
@@ -172,12 +176,12 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
       if (logoErr) {
         setSaving(false);
         console.error("[Config] enviar logo:", logoErr);
-        return toast.error(getFriendlyErrorMessage(logoErr, "enviar a logo"));
+        return toast.error(getFriendlyErrorMessage(logoErr, t, "err_action_upload_logo"));
       }
       setPendingLogoFile(null);
     }
 
-    const parsedSettings = barbershopSettingsSchema.safeParse({ name, address: address || "", phone: phone.replace(/\D/g, "") });
+    const parsedSettings = createBarbershopSettingsSchema(t).safeParse({ name, address: address || "", phone: phone.replace(/\D/g, "") });
     if (!parsedSettings.success) { setSaving(false); return toast.error(parsedSettings.error.errors[0].message); }
     const { error } = await supabase
       .from("barbershops")
@@ -238,10 +242,10 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
           <Select value={interval} onValueChange={setInterval}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="15">15 min</SelectItem>
-              <SelectItem value="30">30 min</SelectItem>
-              <SelectItem value="45">45 min</SelectItem>
-              <SelectItem value="60">60 min</SelectItem>
+              <SelectItem value="15">15 {t("minute")}</SelectItem>
+              <SelectItem value="30">30 {t("minute")}</SelectItem>
+              <SelectItem value="45">45 {t("minute")}</SelectItem>
+              <SelectItem value="60">60 {t("minute")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -250,10 +254,10 @@ function BarbershopForm({ onSaved }: { onSaved: () => void }) {
           <Select value={maxAdvance} onValueChange={setMaxAdvance}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="7">7 dias</SelectItem>
-              <SelectItem value="15">15 dias</SelectItem>
-              <SelectItem value="30">30 dias</SelectItem>
-              <SelectItem value="60">60 dias</SelectItem>
+              <SelectItem value="7">7 {t("settings_days_unit")}</SelectItem>
+              <SelectItem value="15">15 {t("settings_days_unit")}</SelectItem>
+              <SelectItem value="30">30 {t("settings_days_unit")}</SelectItem>
+              <SelectItem value="60">60 {t("settings_days_unit")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -319,7 +323,7 @@ function BusinessHours() {
       <div className="space-y-3">
         {hours.map((h, i) => (
           <div key={h.day_of_week} className="flex flex-wrap items-center gap-3 border-b border-border pb-3 last:border-0">
-            <div className="w-24 text-sm font-medium">{DAYS_PT[h.day_of_week]}</div>
+            <div className="w-24 text-sm font-medium">{t(DAY_KEYS[h.day_of_week])}</div>
             <div className="flex items-center gap-2">
               <Switch checked={!h.is_closed} onCheckedChange={(v) => update(i, { is_closed: !v })} />
               <span className="text-xs text-muted-foreground">{h.is_closed ? t("closed") : t("open")}</span>
@@ -330,7 +334,7 @@ function BusinessHours() {
                   value={h.open_time?.slice(0, 5) ?? "09:00"}
                   onChange={(v) => update(i, { open_time: v })}
                 />
-                <span className="text-muted-foreground text-xs">às</span>
+                <span className="text-muted-foreground text-xs">{t("settings_time_to")}</span>
                 <TimeSelect
                   value={h.close_time?.slice(0, 5) ?? "19:00"}
                   onChange={(v) => update(i, { close_time: v })}
@@ -365,7 +369,7 @@ function ProfessionalsTab() {
   const add = async () => {
     if (!name.trim() || !barbershop) return toast.error(t("settings_name_required"));
     if (phone.replace(/\D/g, "").length < 10) return toast.error(t("settings_phone_required"));
-    const parsedProf = professionalSchema.safeParse({ name, phone: phone.replace(/\D/g, "") });
+    const parsedProf = createProfessionalSchema(t).safeParse({ name, phone: phone.replace(/\D/g, "") });
     if (!parsedProf.success) return toast.error(parsedProf.error.errors[0].message);
     const { data: created, error } = await supabase
       .from("professionals")
@@ -374,7 +378,7 @@ function ProfessionalsTab() {
       .single();
     if (error || !created) {
       console.error("[Config] adicionar profissional:", error);
-      return toast.error(getFriendlyErrorMessage(error, "salvar profissional"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_save_professional"));
     }
     const { data: activeServices } = await supabase.from("services").select("id").eq("barbershop_id", barbershop.id).eq("active", true);
     if (activeServices && activeServices.length > 0) {
@@ -392,7 +396,7 @@ function ProfessionalsTab() {
     load();
   };
   const remove = async (id: string) => {
-    if (!confirm("Remover profissional?")) return;
+    if (!confirm(t("settings_delete_prof_confirm"))) return;
     await supabase.from("professionals").delete().eq("id", id);
     load();
   };
@@ -531,7 +535,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
       onClose();
     } catch (e: any) {
       console.error(e);
-      toast.error(getFriendlyErrorMessage(e, "salvar configurações"));
+      toast.error(getFriendlyErrorMessage(e, t, "err_action_save_settings"));
     } finally {
       setSaving(false);
     }
@@ -563,7 +567,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
             <p className="text-xs text-muted-foreground">{t("settings_hours_hint")}</p>
             {hours.map((h, i) => (
               <div key={h.day_of_week} className="flex flex-wrap items-center gap-2 border-b border-border pb-2 last:border-0">
-                <div className="w-20 text-sm font-medium">{DAYS_PT[h.day_of_week]}</div>
+                <div className="w-20 text-sm font-medium">{t(DAY_KEYS[h.day_of_week])}</div>
                 <div className="flex items-center gap-1.5">
                   <Switch checked={!h.is_closed} onCheckedChange={(v) => updateHour(i, { is_closed: !v })} />
                   <span className="text-xs text-muted-foreground">
@@ -573,7 +577,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
                 {!h.is_closed && (
                   <>
                     <TimeSelect value={h.open_time} onChange={(v) => updateHour(i, { open_time: v })} />
-                    <span className="text-xs text-muted-foreground">às</span>
+                    <span className="text-xs text-muted-foreground">{t("settings_time_to")}</span>
                     <TimeSelect value={h.close_time} onChange={(v) => updateHour(i, { close_time: v })} />
                   </>
                 )}
@@ -615,6 +619,7 @@ function ProfessionalConfigDialog({ professional, onClose }: { professional: any
 
 function SubscriptionCard() {
   const { barbershop } = useAuth();
+  const { t, language } = useLanguage();
   const [busy, setBusy] = useState(false);
   if (!barbershop) return null;
 
@@ -628,43 +633,44 @@ function SubscriptionCard() {
     : null;
 
   const badges: Record<string, { label: string; cls: string }> = {
-    trial: { label: "Trial", cls: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
-    active: { label: "Ativo", cls: "bg-success/15 text-success border-success/30" },
-    past_due: { label: "Pagamento pendente", cls: "bg-destructive/15 text-destructive border-destructive/30" },
-    canceled: { label: "Cancelado", cls: "bg-muted text-muted-foreground border-border" },
-    incomplete: { label: "Incompleto", cls: "bg-muted text-muted-foreground border-border" },
+    trial: { label: t("sub_status_trial"), cls: "bg-blue-500/15 text-blue-400 border-blue-500/30" },
+    active: { label: t("sub_status_active"), cls: "bg-success/15 text-success border-success/30" },
+    past_due: { label: t("paywall_pastdue_title"), cls: "bg-destructive/15 text-destructive border-destructive/30" },
+    canceled: { label: t("sub_status_canceled"), cls: "bg-muted text-muted-foreground border-border" },
+    incomplete: { label: t("sub_status_incomplete"), cls: "bg-muted text-muted-foreground border-border" },
   };
   const b = badges[status] ?? badges.trial;
 
   const usesPortal = status === "active" || status === "past_due";
   const ctaLabel =
-    status === "active" ? "Gerenciar assinatura"
-      : status === "past_due" ? "Atualizar pagamento"
-        : status === "canceled" ? "Reativar"
-          : "Assinar agora";
+    status === "active" ? t("sub_cta_manage")
+      : status === "past_due" ? t("sub_cta_update_payment")
+        : status === "canceled" ? t("sub_cta_reactivate")
+          : t("paywall_trial_cta");
 
   const onClick = async () => {
     setBusy(true);
     try {
       await (usesPortal ? redirectToPortal() : redirectToCheckout());
     } catch (err) {
+      console.error("[SubscriptionCard]", err);
       setBusy(false);
-      toast.error(err instanceof Error ? err.message : "Tente novamente.");
+      toast.error(t("err_try_again"));
     }
   };
 
   return (
     <Card className="border-gold/30 bg-card p-5">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Assinatura</h3>
+        <h3 className="font-semibold">{t("sub_title")}</h3>
         <span className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${b.cls}`}>{b.label}</span>
       </div>
 
       {status === "trial" && (
         <div className="mt-3">
           <p className="text-sm text-muted-foreground">
-            Trial ativo — expira em{" "}
-            <span className="font-semibold text-foreground">{daysLeft} {daysLeft === 1 ? "dia" : "dias"}</span>
+            {t("sub_trial_active_prefix")}{" "}
+            <span className="font-semibold text-foreground">{daysLeft} {t(daysLeft === 1 ? "sub_day_one" : "sub_day_many")}</span>
           </p>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div className="h-full bg-gradient-gold" style={{ width: `${Math.min(100, (daysLeft / 7) * 100)}%` }} />
@@ -673,15 +679,15 @@ function SubscriptionCard() {
       )}
       {status === "active" && (
         <p className="mt-3 text-sm text-muted-foreground">
-          Trato Barber Pro — <span className="font-semibold text-foreground">R$ 69,99/mês</span>
-          {periodEnds && <> · Próxima cobrança: {formatDateBR(periodEnds.toISOString().slice(0, 10))}</>}
+          Trato Barber Pro — <span className="font-semibold text-foreground">R$ 69,99{t("landing_pricing_period")}</span>
+          {periodEnds && <> · {t("sub_next_charge")} {formatDateBR(periodEnds.toISOString().slice(0, 10), language)}</>}
         </p>
       )}
       {status === "past_due" && (
-        <p className="mt-3 text-sm text-destructive">Pagamento pendente — atualize sua forma de pagamento.</p>
+        <p className="mt-3 text-sm text-destructive">{t("sub_past_due_msg")}</p>
       )}
       {status === "canceled" && (
-        <p className="mt-3 text-sm text-muted-foreground">Sua assinatura foi cancelada.</p>
+        <p className="mt-3 text-sm text-muted-foreground">{t("sub_canceled_msg")}</p>
       )}
 
       <Button
@@ -697,12 +703,13 @@ function SubscriptionCard() {
 
 function ContaTab() {
   const { user, barbershop } = useAuth();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState("");
   const [sending, setSending] = useState(false);
 
   const handleDeletion = async () => {
-    if (confirm !== "EXCLUIR") return;
+    if (confirm !== t("settings_delete_keyword")) return;
     setSending(true);
     // Open mailto as fallback — backend deletion processed manually
     const subject = encodeURIComponent("Solicitação de exclusão de conta — Trato Barber");
@@ -730,7 +737,7 @@ function ContaTab() {
           <div>
             <div className="font-semibold">{user?.email}</div>
             <div className="mt-0.5 text-xs text-muted-foreground">
-              Barbearia: {barbershop?.name ?? "—"}
+              {t("settings_barbershop_label")} {barbershop?.name ?? "—"}
             </div>
           </div>
         </div>
@@ -739,10 +746,9 @@ function ContaTab() {
       <SubscriptionCard />
 
       <Card className="border-destructive/30 bg-card p-5">
-        <h3 className="mb-1 font-semibold text-destructive">Zona de perigo</h3>
+        <h3 className="mb-1 font-semibold text-destructive">{t("settings_danger_zone")}</h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Ao excluir sua conta, todos os seus dados e dados de clientes serão permanentemente
-          removidos em até 90 dias. Esta ação não pode ser desfeita.
+          {t("settings_delete_account_warning")}
         </p>
         <Button
           variant="outline"
@@ -750,7 +756,7 @@ function ContaTab() {
           onClick={() => setOpen(true)}
         >
           <AlertTriangle className="mr-2 h-4 w-4" />
-          Solicitar exclusão da conta
+          {t("settings_request_deletion_btn")}
         </Button>
       </Card>
 
@@ -759,35 +765,34 @@ function ContaTab() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Excluir conta
+              {t("settings_delete_account_title")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Ao excluir sua conta, todos os seus dados e dados de clientes serão permanentemente
-            removidos em até 90 dias. Esta ação não pode ser desfeita.
+            {t("settings_delete_account_warning")}
           </p>
           <div className="space-y-1.5">
             <Label htmlFor="del-confirm" className="text-sm">
-              Digite <strong className="text-foreground">EXCLUIR</strong> para confirmar:
+              {t("settings_type_to_confirm")} <strong className="text-foreground">{t("settings_delete_keyword")}</strong> {t("settings_to_confirm")}
             </Label>
             <Input
               id="del-confirm"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              placeholder="EXCLUIR"
+              placeholder={t("settings_delete_keyword")}
               className="font-mono"
             />
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => { setOpen(false); setConfirm(""); }}>
-              Cancelar
+              {t("cancel")}
             </Button>
             <Button
-              disabled={confirm !== "EXCLUIR" || sending}
+              disabled={confirm !== t("settings_delete_keyword") || sending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDeletion}
             >
-              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar exclusão"}
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("settings_confirm_deletion_btn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -812,7 +817,7 @@ function ServicesTab() {
 
   const add = async () => {
     if (!form.name.trim() || !barbershop) return;
-    const parsedSvc = serviceSchema.safeParse({ name: form.name, duration_minutes: form.duration, price: form.price });
+    const parsedSvc = createServiceSchema(t).safeParse({ name: form.name, duration_minutes: form.duration, price: form.price });
     if (!parsedSvc.success) return toast.error(parsedSvc.error.errors[0].message);
     const { data: svc, error } = await supabase.from("services").insert({
       barbershop_id: barbershop.id,
@@ -822,7 +827,7 @@ function ServicesTab() {
     }).select("id").single();
     if (error || !svc) {
       console.error("[Config] adicionar serviço:", error);
-      return toast.error(getFriendlyErrorMessage(error, "salvar serviço"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_save_service"));
     }
     const { data: existingLinks } = await supabase
       .from("professional_services")
@@ -839,7 +844,7 @@ function ServicesTab() {
     load();
   };
   const remove = async (id: string) => {
-    if (!confirm("Remover serviço?")) return;
+    if (!confirm(t("settings_delete_service_confirm"))) return;
     await supabase.from("services").delete().eq("id", id);
     load();
   };
@@ -862,7 +867,7 @@ function ServicesTab() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-display tracking-wide">Novo Serviço</DialogTitle>
+            <DialogTitle className="font-display tracking-wide">{t("settings_new_service_title")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">

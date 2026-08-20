@@ -102,7 +102,7 @@ function ClientesPage() {
       <div>
         <h1 className="font-display text-3xl tracking-wide md:text-4xl">{t("clients_title")}</h1>
         <p className="text-sm text-muted-foreground">
-          {clients.length} cliente{clients.length !== 1 && "s"} cadastrado{clients.length !== 1 && "s"}
+          {clients.length} {t(clients.length === 1 ? "clients_registered_one" : "clients_registered_many")}
         </p>
       </div>
 
@@ -165,7 +165,7 @@ function ClientesPage() {
                           )}
                         </div>
                         <div className="truncate text-xs text-muted-foreground">
-                          {formatPhone(c.phone)} • {c.total_visits} visita{c.total_visits !== 1 && "s"} • {brl(Number(c.total_spent))}
+                          {formatPhone(c.phone)} • {c.total_visits} {t(c.total_visits === 1 ? "clients_visit_one" : "clients_visit_many")} • {brl(Number(c.total_spent))}
                         </div>
                       </div>
                       <div className="hidden text-right text-xs text-muted-foreground sm:block">
@@ -202,7 +202,7 @@ function ClientesPage() {
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium">{c.name}</div>
                       <div className="truncate text-xs text-muted-foreground">
-                        {c.last_visit ? `Última visita ${daysSince(c.last_visit)}d atrás` : "Sem visitas"}
+                        {c.last_visit ? `${t("clients_last_visit_prefix")} ${daysSince(c.last_visit)}${t("clients_days_ago")}` : t("clients_no_visits")}
                       </div>
                     </div>
                     <a href={`https://wa.me/55${c.phone}?text=${encodeURIComponent(buildReminder(c))}`} target="_blank" rel="noreferrer">
@@ -228,7 +228,7 @@ function ClientesPage() {
 }
 
 function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: Client) => void }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [history, setHistory] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [notes, setNotes] = useState(client.notes ?? "");
@@ -280,20 +280,20 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
         <Card className="bg-background/40 p-3">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("clients_last")}</div>
           <div className="font-mono text-xs">
-            {client.last_visit ? `${daysSince(client.last_visit)}d atrás` : "—"}
+            {client.last_visit ? `${daysSince(client.last_visit)}${t("clients_days_ago")}` : "—"}
           </div>
         </Card>
       </div>
 
       {Number(client.no_show_count) > 0 && (
         <p className="text-xs text-amber-500">
-          ⚠️ {client.no_show_count} falta{Number(client.no_show_count) > 1 ? "s" : ""} registrada{Number(client.no_show_count) > 1 ? "s" : ""}
+          ⚠️ {client.no_show_count} {t(Number(client.no_show_count) > 1 ? "clients_noshow_many" : "clients_noshow_one")}
         </p>
       )}
 
       <div className="space-y-1 text-sm">
-        <div><span className="text-muted-foreground">Telefone:</span> {formatPhone(client.phone)}</div>
-        {client.email && <div><span className="text-muted-foreground">E-mail:</span> {client.email}</div>}
+        <div><span className="text-muted-foreground">{t("clients_phone_label")}</span> {formatPhone(client.phone)}</div>
+        {client.email && <div><span className="text-muted-foreground">{t("clients_email_label")}</span> {client.email}</div>}
       </div>
 
       <div className="space-y-1.5">
@@ -317,7 +317,7 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
           ) : (
             history.map((h) => (
               <div key={h.id} className="flex items-center gap-3 rounded border border-border bg-background/40 p-2 text-xs">
-                <div className="font-mono text-gold">{formatDateBR(h.date)}</div>
+                <div className="font-mono text-gold">{formatDateBR(h.date, language)}</div>
                 <div className="flex-1 truncate">{h.services?.name} • {h.professionals?.name}</div>
                 <div className="font-mono">{brl(Number(h.services?.price ?? 0))}</div>
               </div>
@@ -332,7 +332,7 @@ function ClientProfile({ client, onUpdated }: { client: Client; onUpdated: (c: C
           ) : (
             products.map((p, i) => (
               <div key={i} className="flex items-center gap-3 rounded border border-border bg-background/40 p-2 text-xs">
-                <div className="font-mono text-muted-foreground">{formatDateBR(p.date)}</div>
+                <div className="font-mono text-muted-foreground">{formatDateBR(p.date, language)}</div>
                 <div className="flex-1 truncate">{p.name} × {p.quantity}</div>
                 <div className="font-mono">{brl(Number(p.unit_price) * p.quantity)}</div>
               </div>

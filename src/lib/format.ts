@@ -1,4 +1,7 @@
+import { format as formatDateFns } from "date-fns";
+import { ptBR, enUS } from "date-fns/locale";
 import type { TranslationKey } from "@/i18n/pt";
+import type { Language } from "@/hooks/useLanguage";
 
 export const brl = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v ?? 0);
@@ -13,10 +16,50 @@ export const formatPhone = (raw: string) => {
 
 export const onlyDigits = (s: string) => (s || "").replace(/\D/g, "");
 
-export const formatDateBR = (d: string | Date) => {
+export const formatDateBR = (d: string | Date, lang: Language = "pt") => {
   const date = typeof d === "string" ? new Date(d + (d.length === 10 ? "T00:00:00" : "")) : d;
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(date);
+  return lang === "en"
+    ? new Intl.DateTimeFormat("en-US", { day: "2-digit", month: "long", year: "numeric" }).format(date)
+    : new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "long", year: "numeric" }).format(date);
 };
+
+// Data curta numérica (dd/MM em PT, MM/dd em EN) — substitui hacks tipo
+// formatDateBR(x).split(" de ")... que só funcionavam em português.
+export const formatDateShortNumeric = (d: string | Date, lang: Language): string => {
+  const date = typeof d === "string" ? new Date(d + (d.length === 10 ? "T00:00:00" : "")) : d;
+  return lang === "en" ? formatDateFns(date, "MM/dd") : formatDateFns(date, "dd/MM");
+};
+
+// Fonte única de "data como YYYY-MM-DD" pro projeto inteiro (frontend).
+// Usa UTC (toISOString) deliberadamente — é o padrão já usado em todo
+// o resto do código (agendamentos, financeiro, checkout, agendamento
+// público). Não trocar por getFullYear/getMonth/getDate: isso causou
+// o Dashboard divergir do resto do app perto da virada do dia (Brasil
+// é UTC-3, então getters locais e toISOString discordam por até 3h).
+export const formatDateISO = (d: Date): string => d.toISOString().slice(0, 10);
+
+// Datas localizadas (PT/EN) usando date-fns — substitui os vários
+// new Intl.DateTimeFormat("pt-BR", ...) hardcoded espalhados pelo
+// projeto, que não reagiam ao toggle de idioma.
+const dfnsLocale = (lang: Language) => (lang === "en" ? enUS : ptBR);
+
+export const formatWeekdayShort = (d: Date, lang: Language): string =>
+  formatDateFns(d, "EEE", { locale: dfnsLocale(lang) });
+
+export const formatDayHeader = (d: Date, lang: Language): string =>
+  lang === "en"
+    ? formatDateFns(d, "EEEE, MMMM d", { locale: dfnsLocale(lang) })
+    : formatDateFns(d, "EEEE, d 'de' MMMM", { locale: dfnsLocale(lang) });
+
+export const formatShortDateLabel = (d: Date, lang: Language): string =>
+  lang === "en"
+    ? formatDateFns(d, "EEE, MMM d", { locale: dfnsLocale(lang) })
+    : formatDateFns(d, "EEE, d 'de' MMM", { locale: dfnsLocale(lang) });
+
+export const formatMonthYear = (d: Date, lang: Language): string =>
+  lang === "en"
+    ? formatDateFns(d, "MMMM yyyy", { locale: dfnsLocale(lang) })
+    : formatDateFns(d, "MMMM 'de' yyyy", { locale: dfnsLocale(lang) });
 
 export function copyToClipboard(text: string): void {
   const fallback = () => {

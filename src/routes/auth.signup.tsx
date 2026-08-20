@@ -10,7 +10,7 @@ import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { formatPhone, onlyDigits, passwordStrength } from "@/lib/format";
-import { signupSchema } from "@/lib/validationSchemas";
+import { createSignupSchema } from "@/lib/validationSchemas";
 import { useFormValidation } from "@/hooks/useFormValidation";
 
 export const Route = createFileRoute("/auth/signup")({
@@ -33,7 +33,7 @@ function Signup() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [triedSubmit, setTriedSubmit] = useState(false);
-  const { errors, validate, clearError } = useFormValidation(signupSchema);
+  const { errors, validate, clearError } = useFormValidation(createSignupSchema(t));
 
   const handleGoogleAuth = async () => {
     setGoogleLoading(true);
@@ -166,7 +166,7 @@ function Signup() {
           {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="confirm">Confirmar senha</Label>
+          <Label htmlFor="confirm">{t("auth_confirm_password_label")}</Label>
           <Input
             id="confirm"
             type="password"
@@ -186,19 +186,19 @@ function Signup() {
             className="mt-0.5 shrink-0"
           />
           <span>
-            Li e concordo com os{" "}
+            {t("auth_terms_agree_prefix")}{" "}
             <Link to="/termos" target="_blank" rel="noopener" className="text-gold hover:underline">
-              Termos de Uso
+              {t("auth_terms_of_use")}
             </Link>{" "}
-            e a{" "}
+            {t("auth_terms_and")}{" "}
             <Link to="/privacidade" target="_blank" rel="noopener" className="text-gold hover:underline">
-              Política de Privacidade
+              {t("auth_privacy_policy")}
             </Link>{" "}
-            do Trato Barber. <span className="text-destructive">*</span>
+            {t("auth_terms_agree_suffix")} <span className="text-destructive">*</span>
           </span>
         </label>
         {triedSubmit && !form.terms && (
-          <p className="text-xs text-destructive">Você precisa aceitar os termos para criar uma conta</p>
+          <p className="text-xs text-destructive">{t("auth_terms_required")}</p>
         )}
         <label className="flex items-start gap-2 text-sm text-muted-foreground">
           <Checkbox
@@ -207,8 +207,7 @@ function Signup() {
             className="mt-0.5 shrink-0"
           />
           <span>
-            Aceito receber novidades e dicas do Trato Barber por e-mail.
-            Você pode cancelar a qualquer momento.
+            {t("auth_marketing_consent")}
           </span>
         </label>
 
@@ -226,7 +225,7 @@ function Signup() {
           <span className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs text-muted-foreground">
-          <span className="bg-background px-2">ou cadastre-se com</span>
+          <span className="bg-background px-2">{t("auth_signup_or_google")}</span>
         </div>
       </div>
 
@@ -247,7 +246,7 @@ function Signup() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Cadastrar com Google
+            {t("auth_signup_with_google")}
           </>
         )}
       </Button>

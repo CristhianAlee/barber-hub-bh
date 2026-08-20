@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { authService } from "@/services/authService";
 import { supabase } from "@/lib/supabase";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
-import { loginSchema } from "@/lib/validationSchemas";
+import { createLoginSchema } from "@/lib/validationSchemas";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { useLanguage } from "@/hooks/useLanguage";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ function Login() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { errors, validate, clearError } = useFormValidation(loginSchema);
+  const { errors, validate, clearError } = useFormValidation(createLoginSchema(t));
   const [loginError, setLoginError] = useState("");
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [resending, setResending] = useState(false);
@@ -61,7 +61,7 @@ function Login() {
       if (error.includes("Email not confirmed")) {
         setNeedsConfirmation(true);
       }
-      const msg = error.includes("Invalid") ? t("auth_invalid_credentials") : getFriendlyErrorMessage(error, "fazer login");
+      const msg = error.includes("Invalid") ? t("auth_invalid_credentials") : getFriendlyErrorMessage(error, t, "err_action_login");
       setLoginError(msg);
       toast.error(msg);
       return;
@@ -130,7 +130,7 @@ function Login() {
             disabled={resending}
             onClick={handleResendConfirmation}
           >
-            {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Reenviar e-mail de confirmação"}
+            {resending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("auth_resend_confirmation_btn")}
           </Button>
         )}
         <Button
@@ -147,7 +147,7 @@ function Login() {
           <span className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center text-xs text-muted-foreground">
-          <span className="bg-background px-2">ou continue com</span>
+          <span className="bg-background px-2">{t("auth_login_or_google")}</span>
         </div>
       </div>
 
@@ -168,7 +168,7 @@ function Login() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            Entrar com Google
+            {t("auth_login_with_google")}
           </>
         )}
       </Button>

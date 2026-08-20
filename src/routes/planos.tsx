@@ -1,36 +1,34 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useLanguage } from "@/hooks/useLanguage";
 import { redirectToCheckout } from "@/services/stripeService";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { Check, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import type { TranslationKey } from "@/i18n/pt";
 
 export const Route = createFileRoute("/planos")({
   component: Planos,
 });
 
-const FEATURES = [
-  "Agendamento online ilimitado",
-  "Painel completo do barbeiro",
-  "Controle financeiro automático",
-  "Estoque inteligente",
-  "Gestão de clientes",
-  "Link exclusivo de agendamento",
-  "Suporte via WhatsApp",
+const FEATURE_KEYS: TranslationKey[] = [
+  "planos_feat_1", "planos_feat_2", "planos_feat_3", "planos_feat_4",
+  "planos_feat_5", "planos_feat_6", "planos_feat_7",
 ];
 
-const FAQ = [
-  { q: "Preciso de cartão no trial?", a: "Não. Os 7 dias são totalmente grátis e sem cartão." },
-  { q: "Posso cancelar?", a: "Sim, quando quiser — direto pelo portal de assinatura." },
-  { q: "Como funciona o trial?", a: "7 dias grátis. A cobrança só acontece após o período, se você continuar." },
+const FAQ_KEYS: { q: TranslationKey; a: TranslationKey }[] = [
+  { q: "planos_faq_q1", a: "planos_faq_a1" },
+  { q: "planos_faq_q2", a: "planos_faq_a2" },
+  { q: "planos_faq_q3", a: "planos_faq_a3" },
 ];
 
 function Planos() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
 
   const start = async () => {
@@ -42,8 +40,9 @@ function Planos() {
     try {
       await redirectToCheckout();
     } catch (err) {
+      console.error("[Planos]", err);
       setBusy(false);
-      toast.error(err instanceof Error ? err.message : "Tente novamente.");
+      toast.error(t("err_try_again"));
     }
   };
 
@@ -60,7 +59,7 @@ function Planos() {
           </Link>
           {!user && (
             <Link to="/auth/login" className="text-sm text-gold hover:underline">
-              Entrar
+              {t("landing_header_signin")}
             </Link>
           )}
         </div>
@@ -68,10 +67,10 @@ function Planos() {
         {/* Hero */}
         <div className="mb-10 text-center">
           <h1 className="font-display text-4xl tracking-wide md:text-5xl">
-            Comece hoje. <span className="text-gold">Cancele quando quiser.</span>
+            {t("planos_hero_pre")} <span className="text-gold">{t("planos_hero_gold")}</span>
           </h1>
           <p className="mt-3 text-muted-foreground">
-            Tudo o que sua barbearia precisa, num só lugar.
+            {t("planos_hero_sub")}
           </p>
         </div>
 
@@ -81,15 +80,15 @@ function Planos() {
             <h2 className="font-display text-2xl tracking-wide text-gold">Trato Barber Pro</h2>
             <div className="mt-3 flex items-end justify-center gap-1">
               <span className="font-display text-5xl tracking-wide">R$ 69,99</span>
-              <span className="mb-1 text-sm text-muted-foreground">/mês</span>
+              <span className="mb-1 text-sm text-muted-foreground">{t("landing_pricing_period")}</span>
             </div>
           </div>
 
           <ul className="mt-6 space-y-2.5">
-            {FEATURES.map((f) => (
-              <li key={f} className="flex items-center gap-2 text-sm">
+            {FEATURE_KEYS.map((key) => (
+              <li key={key} className="flex items-center gap-2 text-sm">
                 <Check className="h-4 w-4 shrink-0 text-success" />
-                <span>{f}</span>
+                <span>{t(key)}</span>
               </li>
             ))}
           </ul>
@@ -100,23 +99,23 @@ function Planos() {
             size="lg"
             className="mt-7 w-full bg-gradient-gold text-gold-foreground hover:opacity-90 shadow-gold"
           >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Começar 7 dias grátis"}
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : t("landing_pricing_cta")}
           </Button>
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            Sem cartão no trial · Cancele quando quiser
+            {t("planos_trial_note")}
           </p>
           <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <ShieldCheck className="h-3.5 w-3.5 text-gold" /> Pagamento seguro via Stripe
+            <ShieldCheck className="h-3.5 w-3.5 text-gold" /> {t("planos_secure_payment")}
           </p>
         </Card>
 
         {/* FAQ */}
         <div className="mx-auto mt-12 max-w-md space-y-4">
-          <h3 className="text-center font-display text-xl tracking-wide">Perguntas frequentes</h3>
-          {FAQ.map((item) => (
+          <h3 className="text-center font-display text-xl tracking-wide">{t("planos_faq_title")}</h3>
+          {FAQ_KEYS.map((item) => (
             <div key={item.q} className="rounded-lg border border-border bg-card/60 p-4">
-              <div className="text-sm font-medium">{item.q}</div>
-              <div className="mt-1 text-sm text-muted-foreground">{item.a}</div>
+              <div className="text-sm font-medium">{t(item.q)}</div>
+              <div className="mt-1 text-sm text-muted-foreground">{t(item.a)}</div>
             </div>
           ))}
         </div>

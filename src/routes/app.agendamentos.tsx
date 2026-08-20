@@ -26,9 +26,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { ChevronLeft, ChevronRight, Plus, Loader2, Check, X, CheckCircle2, CalendarClock, UserX, AlertTriangle, Calendar as CalendarIcon } from "lucide-react";
-import { brl, formatPhone, onlyDigits } from "@/lib/format";
+import { brl, formatPhone, onlyDigits, formatDateISO, formatDayHeader, formatShortDateLabel, formatDateShortNumeric } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
-import { appointmentSchema } from "@/lib/validationSchemas";
+import { createAppointmentSchema } from "@/lib/validationSchemas";
 import { toast } from "sonner";
 import { Checkout } from "@/components/Checkout";
 
@@ -41,17 +41,11 @@ function addDays(d: Date, n: number) {
   x.setDate(x.getDate() + n);
   return x;
 }
-const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
 const APPT_SELECT =
   "id, date, time, status, notes, duration_minutes, barbershop_id, professional_id, client_id, service_id, clients(name, phone), services(name, price, duration_minutes), professionals(name)";
-const dayLabel = (d: Date) =>
-  new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(d);
-const shortDateLabel = (d: Date) =>
-  new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
-
 function AgendamentosPage() {
   const { barbershop } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [date, setDate] = useState<Date>(new Date());
   const [calOpen, setCalOpen] = useState(false);
   const [appts, setAppts] = useState<any[]>([]);
@@ -63,14 +57,14 @@ function AgendamentosPage() {
   const [reschedule, setReschedule] = useState<any>(null);
   const [noShow, setNoShow] = useState<any>(null);
 
-  const today = fmtDate(new Date());
+  const today = formatDateISO(new Date());
 
   const load = async () => {
     if (!barbershop) return;
     setLoading(true);
     const [dayRes, pendRes] = await Promise.all([
       supabase.from("appointments").select(APPT_SELECT)
-        .eq("barbershop_id", barbershop.id).eq("date", fmtDate(date)).order("time"),
+        .eq("barbershop_id", barbershop.id).eq("date", formatDateISO(date)).order("time"),
       // Pendências: passadas e ainda sem desfecho (mais antigas primeiro).
       supabase.from("appointments").select(APPT_SELECT)
         .eq("barbershop_id", barbershop.id).in("status", ["pending", "confirmed"]).lt("date", today)
@@ -99,7 +93,7 @@ function AgendamentosPage() {
     if (!a) return;
     setNoShow(null);
     const { error } = await supabase.from("appointments").update({ status: "no_show" }).eq("id", a.id);
-    if (error) return toast.error(getFriendlyErrorMessage(error, "marcar falta"));
+    if (error) return toast.error(getFriendlyErrorMessage(error, t, "err_action_mark_noshow"));
     if (a.client_id) {
       const { data: c } = await supabase.from("clients").select("no_show_count").eq("id", a.client_id).maybeSingle();
       await supabase.from("clients").update({ no_show_count: (c?.no_show_count ?? 0) + 1 }).eq("id", a.client_id);
@@ -113,7 +107,7 @@ function AgendamentosPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="font-display text-3xl tracking-wide md:text-4xl">{t("appt_title")}</h1>
-          <p className="text-sm capitalize text-muted-foreground">{dayLabel(date)}</p>
+          <p className="text-sm capitalize text-muted-foreground">{formatDayHeader(date, language)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" onClick={() => setDate(addDays(date, -1))}>
@@ -123,7 +117,7 @@ function AgendamentosPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="min-w-[9.5rem] justify-start capitalize">
                 <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
-                {shortDateLabel(date)}
+                {formatShortDateLabel(date, language)}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -158,7 +152,7 @@ function AgendamentosPage() {
             }
           >
             <AlertTriangle className="mr-1 h-4 w-4" />
-            Pendências{pending.length > 0 ? ` (${pending.length})` : ""}
+            {t("appt_pending_badge")}{pending.length > 0 ? ` (${pending.length})` : ""}
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -182,7 +176,7 @@ function AgendamentosPage() {
       {showPending && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-sm text-amber-600 dark:text-amber-400">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Mostrando agendamentos passados sem desfecho (mais antigos primeiro). Conclua, marque falta ou cancele.
+          {t("appt_pending_banner")}
         </div>
       )}
 
@@ -195,7 +189,7 @@ function AgendamentosPage() {
           </div>
         ) : (showPending ? pending : appts).length === 0 ? (
           <div className="rounded-lg border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
-            {showPending ? "Nenhuma pendência — tudo em dia! 🎉" : t("appt_empty")}
+            {showPending ? t("appt_no_pending") : t("appt_empty")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -240,17 +234,17 @@ function AgendamentosPage() {
         <DialogContent className="bg-card">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-amber-500">
-              <UserX className="h-5 w-5" /> Cliente faltou
+              <UserX className="h-5 w-5" /> {t("appt_noshow_dialog_title")}
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Confirmar que <span className="font-medium text-foreground">{noShow?.clients?.name ?? "o cliente"}</span> não
-            compareceu? Isso <span className="font-medium">não afeta o financeiro</span> — apenas registra a falta.
+            {t("appt_noshow_confirm_prefix")} <span className="font-medium text-foreground">{noShow?.clients?.name ?? t("appt_noshow_fallback_client")}</span>{" "}
+            {t("appt_noshow_confirm_suffix")}
           </p>
           <div className="mt-2 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setNoShow(null)}>Voltar</Button>
+            <Button variant="outline" onClick={() => setNoShow(null)}>{t("back")}</Button>
             <Button className="bg-amber-500 text-white hover:bg-amber-600" onClick={confirmNoShow}>
-              Marcar falta
+              {t("appt_confirm_noshow_btn")}
             </Button>
           </div>
         </DialogContent>
@@ -260,13 +254,13 @@ function AgendamentosPage() {
 }
 
 function ApptRow({ a, onAction, onCheckout, onReschedule, onNoShow, showDate }: any) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const statusMap: Record<string, { label: string; cls: string }> = {
     pending: { label: t("appt_status_pending"), cls: "bg-muted text-muted-foreground border-border" },
     confirmed: { label: t("appt_status_confirmed"), cls: "bg-gold/15 text-gold border-gold/30" },
     completed: { label: t("appt_status_completed"), cls: "bg-success/15 text-success border-success/30" },
     cancelled: { label: t("appt_status_cancelled"), cls: "bg-destructive/15 text-destructive border-destructive/30" },
-    no_show: { label: "Não compareceu", cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
+    no_show: { label: t("appt_status_noshow"), cls: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
   };
   const m = statusMap[a.status] ?? statusMap.pending;
   return (
@@ -274,7 +268,7 @@ function ApptRow({ a, onAction, onCheckout, onReschedule, onNoShow, showDate }: 
       <div className="rounded-md bg-gold/10 px-3 py-2 text-center font-mono text-base text-gold">
         {showDate && a.date && (
           <div className="text-[10px] leading-none text-gold/70">
-            {new Date(a.date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
+            {formatDateShortNumeric(a.date, language)}
           </div>
         )}
         {a.time?.slice(0, 5)}
@@ -311,7 +305,7 @@ function ApptRow({ a, onAction, onCheckout, onReschedule, onNoShow, showDate }: 
             className="border-amber-500/40 text-amber-500 hover:bg-amber-500/10"
             onClick={onNoShow}
           >
-            <UserX className="mr-1 h-3 w-3" /> Faltou
+            <UserX className="mr-1 h-3 w-3" /> {t("appt_noshow_btn")}
           </Button>
         )}
         {a.status !== "cancelled" && a.status !== "completed" && a.status !== "no_show" && (
@@ -380,7 +374,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
         .from("appointments")
         .select("time, duration_minutes, professional_id")
         .eq("barbershop_id", barbershop.id)
-        .eq("date", fmtDate(date))
+        .eq("date", formatDateISO(date))
         .eq("professional_id", profId)
         .neq("status", "cancelled");
       setBusy(data ?? []);
@@ -431,11 +425,11 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
       toast.error(t("appt_fill_all_fields"));
       return;
     }
-    const parsed = appointmentSchema.safeParse({
+    const parsed = createAppointmentSchema(t).safeParse({
       client_name: name,
       client_phone: onlyDigits(phone),
       notes: notes || "",
-      date: fmtDate(date),
+      date: formatDateISO(date),
       time,
       service_id: serviceId,
       professional_id: profId,
@@ -449,7 +443,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
       .select("id")
       .eq("barbershop_id", barbershop.id)
       .eq("professional_id", profId)
-      .eq("date", fmtDate(date))
+      .eq("date", formatDateISO(date))
       .eq("time", time)
       .neq("status", "cancelled");
     if (clash && clash.length > 0) {
@@ -484,7 +478,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
       professional_id: profId,
       client_id: clientId,
       service_id: serviceId,
-      date: fmtDate(date),
+      date: formatDateISO(date),
       time,
       duration_minutes: svc?.duration_minutes ?? 30,
       status: "confirmed",
@@ -494,7 +488,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
     if (error) {
       console.error("[NewAppt] erro agendamento:", error);
       if (error.code === "23505") return toast.error(t("err_slot_taken"));
-      return toast.error(getFriendlyErrorMessage(error, "salvar o agendamento"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_save_appointment"));
     }
     toast.success(t("appt_created"));
     onCreated();
@@ -510,8 +504,8 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
           <Label>{t("date")}</Label>
           <Input
             type="date"
-            value={fmtDate(date)}
-            min={fmtDate(new Date())}
+            value={formatDateISO(date)}
+            min={formatDateISO(new Date())}
             onChange={(e) => { if (e.target.value) { setDate(new Date(e.target.value + "T00:00:00")); setTime(""); } }}
           />
         </div>
@@ -596,7 +590,7 @@ function NewAppointmentDialog({ date: initialDate, onCreated }: { date: Date; on
 function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: () => void }) {
   const { barbershop } = useAuth();
   const { t } = useLanguage();
-  const [nextDate, setNextDate] = useState(appointment.date ?? fmtDate(new Date()));
+  const [nextDate, setNextDate] = useState(appointment.date ?? formatDateISO(new Date()));
   const [nextTime, setNextTime] = useState(appointment.time?.slice(0, 5) ?? "");
   const [hours, setHours] = useState<any[]>([]);
   const [professionalHours, setProfessionalHours] = useState<any[]>([]);
@@ -677,7 +671,7 @@ function RescheduleDialog({ appointment, onDone }: { appointment: any; onDone: (
     if (error) {
       console.error("[Reschedule] erro:", error);
       if (error.code === "23505") return toast.error(t("err_slot_taken"));
-      return toast.error(getFriendlyErrorMessage(error, "reagendar"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_reschedule"));
     }
     toast.success(t("appt_rescheduled"));
     onDone();

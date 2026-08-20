@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { brl, formatDateBR } from "@/lib/format";
+import { brl, formatDateBR, formatDateISO, formatMonthYear, formatDateShortNumeric } from "@/lib/format";
+import type { TranslationKey } from "@/i18n/pt";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
-import { financialEntrySchema, fixedCostSchema } from "@/lib/validationSchemas";
+import { createFinancialEntrySchema, createFixedCostSchema } from "@/lib/validationSchemas";
 import { Plus, TrendingUp, TrendingDown, DollarSign, Receipt, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
@@ -35,11 +36,9 @@ type Entry = {
 
 type Period = "today" | "7d" | "30d" | "month" | "last_month" | "custom";
 
-const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
-
 function FinanceiroPage() {
   const { barbershop } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<"all" | "income" | "expense">("all");
@@ -48,30 +47,30 @@ function FinanceiroPage() {
   const PER_PAGE = 20;
 
   const [period, setPeriod] = useState<Period>("month");
-  const [customFrom, setCustomFrom] = useState(fmtDate(new Date()));
-  const [customTo, setCustomTo] = useState(fmtDate(new Date()));
+  const [customFrom, setCustomFrom] = useState(formatDateISO(new Date()));
+  const [customTo, setCustomTo] = useState(formatDateISO(new Date()));
 
   function getDateRange(): { from: string; to: string } {
     const now = new Date();
-    const today = fmtDate(now);
+    const today = formatDateISO(now);
     switch (period) {
       case "today": return { from: today, to: today };
       case "7d": {
         const d = new Date(); d.setDate(d.getDate() - 6);
-        return { from: fmtDate(d), to: today };
+        return { from: formatDateISO(d), to: today };
       }
       case "30d": {
         const d = new Date(); d.setDate(d.getDate() - 29);
-        return { from: fmtDate(d), to: today };
+        return { from: formatDateISO(d), to: today };
       }
       case "month": {
         const d = new Date(); d.setDate(1);
-        return { from: fmtDate(d), to: today };
+        return { from: formatDateISO(d), to: today };
       }
       case "last_month": {
         const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const last = new Date(now.getFullYear(), now.getMonth(), 0);
-        return { from: fmtDate(first), to: fmtDate(last) };
+        return { from: formatDateISO(first), to: formatDateISO(last) };
       }
       case "custom": return { from: customFrom, to: customTo };
     }
@@ -104,7 +103,7 @@ function FinanceiroPage() {
     return { income: inc, expense: exp, profit: inc - exp, ticket: count > 0 ? inc / count : 0 };
   }, [entries]);
 
-  const today = fmtDate(new Date());
+  const today = formatDateISO(new Date());
   const dayReport = useMemo(() => {
     const day = entries.filter((e) => e.date === today);
     const inc = day.filter((e) => e.type === "income").reduce((s, e) => s + Number(e.amount), 0);
@@ -132,8 +131,13 @@ function FinanceiroPage() {
     return map;
   }, [entries]);
 
-  const methodLabel = (m: string) =>
-    ({ cash: "Dinheiro", pix: "PIX", debit: "Débito", credit: "Crédito", transfer: "Transferência" }[m] ?? m);
+  const methodLabel = (m: string) => {
+    const keys: Record<string, TranslationKey> = {
+      cash: "fin_payment_cash", pix: "fin_payment_pix", debit: "fin_payment_debit",
+      credit: "fin_payment_credit", transfer: "fin_payment_transfer", outros: "fin_payment_other",
+    };
+    return keys[m] ? t(keys[m]) : m;
+  };
 
   const filtered = entries.filter((e) => filterType === "all" || e.type === filterType);
   const paginated = filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
@@ -154,7 +158,7 @@ function FinanceiroPage() {
         <div>
           <h1 className="font-display text-3xl tracking-wide md:text-4xl">{t("fin_title")}</h1>
           <p className="text-sm text-muted-foreground capitalize">
-            {new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date())}
+            {formatMonthYear(new Date(), language)}
           </p>
         </div>
         <Dialog open={openNew} onOpenChange={setOpenNew}>
@@ -171,8 +175,8 @@ function FinanceiroPage() {
 
       <Tabs defaultValue="lancamentos">
         <TabsList>
-          <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
-          <TabsTrigger value="custos">Custos Fixos</TabsTrigger>
+          <TabsTrigger value="lancamentos">{t("fin_entries")}</TabsTrigger>
+          <TabsTrigger value="custos">{t("fin_tab_fixed_costs")}</TabsTrigger>
         </TabsList>
         <TabsContent value="custos">
           <CustosFixosTab />
@@ -221,7 +225,7 @@ function FinanceiroPage() {
       {/* Breakdown por forma de pagamento */}
       {Object.keys(byMethod).length > 0 && (
         <Card className="border-border bg-card p-4">
-          <div className="mb-3 text-xs uppercase tracking-wider text-muted-foreground">Receitas por forma de pagamento</div>
+          <div className="mb-3 text-xs uppercase tracking-wider text-muted-foreground">{t("fin_payment_breakdown_title")}</div>
           <div className="flex flex-wrap gap-3">
             {Object.entries(byMethod).sort((a, b) => b[1] - a[1]).map(([method, amount]) => (
               <div key={method} className="min-w-[110px] rounded-lg border border-border bg-background/40 px-3 py-2">
@@ -252,7 +256,7 @@ function FinanceiroPage() {
                   cursor={{ fill: "oklch(0.78 0.14 75 / 0.06)" }}
                   contentStyle={{ background: "oklch(0.14 0 0)", border: "1px solid oklch(0.26 0 0)", borderRadius: 10, fontSize: 12, color: "oklch(0.92 0 0)" }}
                   labelStyle={{ color: "oklch(0.78 0.14 75)", fontWeight: 600, marginBottom: 4 }}
-                  formatter={(v: number) => [brl(v)]}
+                  formatter={(v: number, name: string) => [brl(v), name === "Receita" ? t("fin_revenue") : t("fin_expense")]}
                 />
                 <Bar dataKey="Receita" fill="oklch(0.78 0.14 75)" radius={[4, 4, 0, 0]} maxBarSize={40} />
                 <Bar dataKey="Despesa" fill="oklch(0.58 0.21 27)" radius={[4, 4, 0, 0]} maxBarSize={40} />
@@ -298,7 +302,7 @@ function FinanceiroPage() {
               {paginated.map((e) => (
                 <div key={e.id} className="flex items-center gap-3 rounded-lg p-2.5 text-sm">
                   <div className="w-20 font-mono text-xs text-muted-foreground">
-                    {formatDateBR(e.date).split(" de ").slice(0, 2).join("/")}
+                    {formatDateShortNumeric(e.date, language)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{e.description ?? e.category ?? "—"}</div>
@@ -339,6 +343,7 @@ function FinanceiroPage() {
 
 function CustosFixosTab() {
   const { barbershop } = useAuth();
+  const { t } = useLanguage();
   const [list, setList] = useState<any[]>([]);
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("");
@@ -357,7 +362,7 @@ function CustosFixosTab() {
     if (!barbershop) return;
     const a = Number(amount);
     if (!name.trim() || !a || a <= 0) return toast.error(t("fin_fill_name_value"));
-    const parsed = fixedCostSchema.safeParse({ name, amount: a, due_day: Number(dueDay) });
+    const parsed = createFixedCostSchema(t).safeParse({ name, amount: a, due_day: Number(dueDay) });
     if (!parsed.success) return toast.error(parsed.error.errors[0].message);
     setSaving(true);
     const { error } = await supabase.from("fixed_costs").insert({
@@ -366,7 +371,7 @@ function CustosFixosTab() {
     setSaving(false);
     if (error) {
       console.error("[Financeiro] custo fixo:", error);
-      return toast.error(getFriendlyErrorMessage(error, "salvar o custo fixo"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_save_fixed_cost"));
     }
     setName(""); setAmount(""); setDueDay("1");
     load();
@@ -377,7 +382,7 @@ function CustosFixosTab() {
     load();
   };
   const remove = async (id: string) => {
-    if (!confirm("Remover custo fixo?")) return;
+    if (!confirm(t("settings_delete_fixedcost_confirm"))) return;
     await supabase.from("fixed_costs").delete().eq("id", id);
     load();
   };
@@ -388,13 +393,13 @@ function CustosFixosTab() {
     <div className="space-y-4 pt-2">
       <Card className="border-border bg-card p-4">
         <div className="grid grid-cols-12 gap-2">
-          <Input className="col-span-5" maxLength={100} placeholder="Nome (ex: Aluguel)" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input className="col-span-5" maxLength={100} placeholder={t("fin_fixedcost_name_placeholder")} value={name} onChange={(e) => setName(e.target.value)} />
           <Input className="col-span-3" type="number" step="0.01" placeholder="R$" value={amount} onChange={(e) => setAmount(e.target.value)} />
           <Select value={dueDay} onValueChange={setDueDay}>
-            <SelectTrigger className="col-span-2"><SelectValue placeholder="Dia" /></SelectTrigger>
+            <SelectTrigger className="col-span-2"><SelectValue placeholder={t("fin_day_select_placeholder")} /></SelectTrigger>
             <SelectContent>
               {Array.from({ length: 28 }, (_, i) => (
-                <SelectItem key={i + 1} value={String(i + 1)}>Dia {i + 1}</SelectItem>
+                <SelectItem key={i + 1} value={String(i + 1)}>{t("fin_day_option_prefix")} {i + 1}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -407,15 +412,15 @@ function CustosFixosTab() {
       {list.length > 0 && (
         <Card className="border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Custos ativos</span>
-            <span className="font-mono text-sm font-bold text-destructive">{brl(total)}/mês</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("fin_active_costs")}</span>
+            <span className="font-mono text-sm font-bold text-destructive">{brl(total)}{t("fin_per_month")}</span>
           </div>
           <div className="space-y-2">
             {list.map((c) => (
               <div key={c.id} className={`flex items-center gap-3 rounded-lg border p-3 ${c.active ? "border-border" : "border-border opacity-50"}`}>
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{c.name}</div>
-                  <div className="text-xs text-muted-foreground">Vence dia {c.due_day}</div>
+                  <div className="text-xs text-muted-foreground">{t("fin_due_day_prefix")} {c.due_day}</div>
                 </div>
                 <div className="font-mono text-sm font-bold text-destructive">{brl(Number(c.amount))}</div>
                 <Switch checked={c.active} onCheckedChange={(v) => toggle(c.id, v)} />
@@ -428,7 +433,7 @@ function CustosFixosTab() {
         </Card>
       )}
       {list.length === 0 && (
-        <p className="py-12 text-center text-sm text-muted-foreground">Nenhum custo fixo cadastrado</p>
+        <p className="py-12 text-center text-sm text-muted-foreground">{t("fin_no_fixed_costs")}</p>
       )}
     </div>
   );
@@ -466,7 +471,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(fmtDate(new Date()));
+  const [date, setDate] = useState(formatDateISO(new Date()));
   const [paymentMethod, setPaymentMethod] = useState<string>("cash");
   const [saving, setSaving] = useState(false);
 
@@ -474,7 +479,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
     if (!barbershop) return toast.error(t("err_barbershop_not_found"));
     const a = Number(amount);
     if (!a || a <= 0) return toast.error(t("fin_value_invalid"));
-    const parsed = financialEntrySchema.safeParse({
+    const parsed = createFinancialEntrySchema(t).safeParse({
       description: description || "",
       amount: a,
       category: category.trim() || "Outros",
@@ -491,7 +496,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
     setSaving(false);
     if (error) {
       console.error("[Financeiro] lançamento:", error);
-      return toast.error(getFriendlyErrorMessage(error, "salvar lançamento"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_save_entry"));
     }
     toast.success(t("fin_registered"));
     onDone();
@@ -523,7 +528,7 @@ function EntryForm({ onDone }: { onDone: () => void }) {
         </div>
         <div className="space-y-1.5">
           <Label>{t("category")}</Label>
-          <Input maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={type === "income" ? "Serviços, produtos..." : "Aluguel, materiais..."} />
+          <Input maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={type === "income" ? t("fin_category_placeholder_income") : t("fin_category_placeholder_expense")} />
         </div>
         <div className="space-y-1.5">
           <Label>{t("description")}</Label>

@@ -83,7 +83,7 @@ function Onboarding() {
       setLoading(false);
       if (error) {
         console.error("[Onboarding] criar barbearia:", error);
-        return toast.error(getFriendlyErrorMessage(error, "criar a barbearia"));
+        return toast.error(getFriendlyErrorMessage(error, t, "err_action_create_shop"));
       }
     } else {
       const { error } = await supabase

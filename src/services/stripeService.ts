@@ -1,7 +1,10 @@
 import { supabase } from "@/lib/supabase";
-import { getFriendlyErrorMessage } from "@/lib/errorMessages";
 
-/** Inicia o checkout de assinatura (redireciona para o Stripe). */
+/**
+ * Inicia o checkout de assinatura (redireciona para o Stripe).
+ * Sem acesso a `t()` aqui (fora de componente/hook) — o erro é relançado cru
+ * e os chamantes decidem a mensagem exibida (ver padrão `err instanceof Error ? err.message : t("err_try_again")`).
+ */
 export async function redirectToCheckout(): Promise<void> {
   try {
     const { data, error } = await supabase.functions.invoke("create-checkout", { body: {} });
@@ -9,7 +12,7 @@ export async function redirectToCheckout(): Promise<void> {
     if (data?.url) window.location.href = data.url as string;
   } catch (err) {
     console.error("[stripeService.redirectToCheckout]", err);
-    throw new Error(getFriendlyErrorMessage(err, "iniciar pagamento"));
+    throw err;
   }
 }
 
@@ -21,7 +24,7 @@ export async function redirectToPortal(): Promise<void> {
     if (data?.url) window.location.href = data.url as string;
   } catch (err) {
     console.error("[stripeService.redirectToPortal]", err);
-    throw new Error(getFriendlyErrorMessage(err, "abrir portal"));
+    throw err;
   }
 }
 

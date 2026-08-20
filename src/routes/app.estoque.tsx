@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { brl, formatDateBR } from "@/lib/format";
 import { getFriendlyErrorMessage } from "@/lib/errorMessages";
-import { productSchema } from "@/lib/validationSchemas";
+import { createProductSchema } from "@/lib/validationSchemas";
 import { Plus, Search, Loader2, ArrowDown, ArrowUp, Package } from "lucide-react";
 import { toast } from "sonner";
 
@@ -97,9 +97,9 @@ function EstoquePage() {
         <div>
           <h1 className="font-display text-3xl tracking-wide md:text-4xl">{t("stock_title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {products.length} produto{products.length !== 1 && "s"}
+            {products.length} {t(products.length === 1 ? "stock_product_one" : "stock_product_many")}
             {lowStockCount > 0 && (
-              <span className="ml-2 text-destructive">• {lowStockCount} crítico{lowStockCount !== 1 && "s"}</span>
+              <span className="ml-2 text-destructive">• {lowStockCount} {t(lowStockCount === 1 ? "stock_critical" : "stock_critical_many")}</span>
             )}
           </p>
         </div>
@@ -166,7 +166,7 @@ function EstoquePage() {
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {p.category ?? "Sem categoria"} • Custo {brl(Number(p.cost))} • Venda {brl(Number(p.price))}
+                          {p.category ?? "Sem categoria"} • {t("stock_cost")} {brl(Number(p.cost))} • {t("stock_sale_price")} {brl(Number(p.price))}
                         </div>
                       </div>
                       <div className="text-right">
@@ -245,7 +245,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
   const submit = async () => {
     if (!barbershop) return toast.error(t("err_barbershop_not_found"));
     if (!name.trim()) return toast.error(t("estoque_name_required"));
-    const parsed = productSchema.safeParse({
+    const parsed = createProductSchema(t).safeParse({
       name,
       price: Number(price) || 0,
       cost: Number(cost) || 0,
@@ -268,7 +268,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
     setSaving(false);
     if (error) {
       console.error("[Estoque] cadastrar produto:", error);
-      return toast.error(getFriendlyErrorMessage(error, "salvar produto"));
+      return toast.error(getFriendlyErrorMessage(error, t, "err_action_save_product"));
     }
     toast.success(t("estoque_product_created"));
     onDone();
@@ -282,7 +282,7 @@ function ProductForm({ onDone }: { onDone: () => void }) {
       <div className="space-y-3">
         <div className="space-y-1.5"><Label>{t("stock_name")}</Label><Input maxLength={100} value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5"><Label>{t("stock_category")}</Label><Input maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Ex: Pomada" /></div>
+          <div className="space-y-1.5"><Label>{t("stock_category")}</Label><Input maxLength={50} value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t("stock_category_placeholder")} /></div>
           <div className="space-y-1.5"><Label>{t("stock_initial_stock")}</Label><Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} /></div>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -313,10 +313,10 @@ function MovementForm({ product, onDone }: { product: Product; onDone: () => voi
     const newStock = type === "in" ? product.stock_quantity + q : product.stock_quantity - q;
     if (newStock < 0) { setSaving(false); return toast.error(t("estoque_negative_stock")); }
     const { error: e1 } = await supabase.from("stock_movements").insert({ product_id: product.id, type, quantity: q, reason: reason || null });
-    if (e1) { setSaving(false); console.error("[Estoque] movimento:", e1); return toast.error(getFriendlyErrorMessage(e1, "atualizar estoque")); }
+    if (e1) { setSaving(false); console.error("[Estoque] movimento:", e1); return toast.error(getFriendlyErrorMessage(e1, t, "err_action_update_stock")); }
     const { error: e2 } = await supabase.from("products").update({ stock_quantity: newStock }).eq("id", product.id);
     setSaving(false);
-    if (e2) { console.error("[Estoque] atualizar saldo:", e2); return toast.error(getFriendlyErrorMessage(e2, "atualizar estoque")); }
+    if (e2) { console.error("[Estoque] atualizar saldo:", e2); return toast.error(getFriendlyErrorMessage(e2, t, "err_action_update_stock")); }
     toast.success(t("estoque_movement_registered"));
     onDone();
   };
@@ -337,7 +337,7 @@ function MovementForm({ product, onDone }: { product: Product; onDone: () => voi
           </Button>
         </div>
         <div className="space-y-1.5"><Label>{t("stock_quantity")}</Label><Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></div>
-        <div className="space-y-1.5"><Label>{t("stock_reason")}</Label><Input maxLength={100} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={type === "in" ? "Compra, reposição..." : "Uso interno, descarte..."} /></div>
+        <div className="space-y-1.5"><Label>{t("stock_reason")}</Label><Input maxLength={100} value={reason} onChange={(e) => setReason(e.target.value)} placeholder={type === "in" ? t("stock_movement_reason_in_placeholder") : t("stock_movement_reason_out_placeholder")} /></div>
         <Button onClick={submit} disabled={saving} className="w-full bg-gradient-gold text-gold-foreground hover:opacity-90">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("confirm")}
         </Button>

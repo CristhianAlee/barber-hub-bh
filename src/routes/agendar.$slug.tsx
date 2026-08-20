@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Logo } from "@/components/Logo";
 import { useLanguage } from "@/hooks/useLanguage";
-import { brl, formatPhone, onlyDigits, formatDateBR } from "@/lib/format";
-import { publicBookingSchema } from "@/lib/validationSchemas";
+import { brl, formatPhone, onlyDigits, formatDateBR, formatDateISO, formatShortDateLabel, formatWeekdayShort } from "@/lib/format";
+import { createPublicBookingSchema } from "@/lib/validationSchemas";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { Loader2, Check, ChevronLeft, MapPin, Scissors, User, CalendarDays, Clock } from "lucide-react";
 import { toast } from "sonner";
@@ -17,8 +17,9 @@ export const Route = createFileRoute("/agendar/$slug")({
   component: PublicBooking,
 });
 
-const fmtDate = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+// 2023-01-01 é um domingo — usada apenas como referência para gerar os rótulos de dia da semana (index 0-6).
+const WEEKDAY_REFERENCE_SUNDAY = new Date(2023, 0, 1);
 const timeToMinutes = (value: string) => {
   const [hh, mm] = value.split(":").map(Number);
   return hh * 60 + mm;
@@ -50,7 +51,7 @@ function LangToggle() {
 
 function PublicBooking() {
   const { slug } = useParams({ from: "/agendar/$slug" });
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [bs, setBs] = useState<any>(null);
   const [services, setServices] = useState<any[]>([]);
   const [profs, setProfs] = useState<any[]>([]);
@@ -70,7 +71,7 @@ function PublicBooking() {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
-  const { errors, validate, clearError } = useFormValidation(publicBookingSchema);
+  const { errors, validate, clearError } = useFormValidation(createPublicBookingSchema(t));
 
   useEffect(() => {
     (async () => {
@@ -129,13 +130,13 @@ function PublicBooking() {
         ? (professionalHours.find((x) => x.professional_id === profId && x.day_of_week === dow) ?? hours.find((x) => x.day_of_week === dow))
         : hours.find((x) => x.day_of_week === dow);
       out.push({
-        date: fmtDate(d),
-        label: new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "2-digit", month: "short" }).format(d),
+        date: formatDateISO(d),
+        label: formatShortDateLabel(d, language),
         closed: !h || h.is_closed,
       });
     }
     return out;
-  }, [bs, hours, professionalHours, profId]);
+  }, [bs, hours, professionalHours, profId, language]);
 
   const [slots, setSlots] = useState<string[]>([]);
   useEffect(() => {
@@ -153,7 +154,7 @@ function PublicBooking() {
 
       const out = new Set<string>();
       const now = new Date();
-      const isToday = date === fmtDate(now);
+      const isToday = date === formatDateISO(now);
       const nowMin = now.getHours() * 60 + now.getMinutes();
 
       candidateProfs.forEach((candidate) => {
@@ -324,11 +325,11 @@ function PublicBooking() {
                   <Clock className="h-3.5 w-3.5" /> {t("book_hours")}
                 </div>
                 <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
-                  {["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"].map((label, i) => {
+                  {[0, 1, 2, 3, 4, 5, 6].map((i) => {
                     const h = hours.find((x) => x.day_of_week === i);
                     return (
                       <div key={i} className="flex justify-between">
-                        <span className="text-muted-foreground">{label}</span>
+                        <span className="text-muted-foreground">{formatWeekdayShort(addDays(WEEKDAY_REFERENCE_SUNDAY, i), language)}</span>
                         <span className="font-mono">
                           {!h || h.is_closed ? t("closed") : `${h.open_time.slice(0,5)} – ${h.close_time.slice(0,5)}`}
                         </span>

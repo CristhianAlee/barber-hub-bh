@@ -177,36 +177,12 @@ function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const features = [
-    {
-      icon: Calendar,
-      title: "Agendamento Online",
-      desc: "Seus clientes agendam sozinhos pelo celular, 24 horas por dia. Sem ligações, sem confusão, sem horário perdido.",
-    },
-    {
-      icon: LayoutDashboard,
-      title: "Painel do Barbeiro",
-      desc: "Veja todos os agendamentos do dia, confirme com um clique e gerencie sua agenda em tempo real.",
-    },
-    {
-      icon: TrendingUp,
-      title: "Financeiro Real",
-      desc: "Receitas, despesas e lucro calculados automaticamente. Saiba exatamente quanto entra e sai todo dia.",
-    },
-    {
-      icon: Package,
-      title: "Estoque Inteligente",
-      desc: "Alerta automático quando o produto está acabando. Nunca mais fique sem pomada no momento errado.",
-    },
-    {
-      icon: Users,
-      title: "Clientes Ativos",
-      desc: "Histórico completo de cada cliente. Lembre quem não aparece há 30 dias e traga de volta com um clique.",
-    },
-    {
-      icon: Smartphone,
-      title: "Mobile First",
-      desc: "Feito para usar no celular durante o atendimento. Rápido, intuitivo e sem fricção nenhuma.",
-    },
+    { icon: Calendar, title: t("landing_feat_schedule_title"), desc: t("landing_feat_schedule_desc") },
+    { icon: LayoutDashboard, title: t("landing_feat_panel_title"), desc: t("landing_feat_panel_desc") },
+    { icon: TrendingUp, title: t("landing_feat_financial_title"), desc: t("landing_feat_financial_desc") },
+    { icon: Package, title: t("landing_feat_stock_title"), desc: t("landing_feat_stock_desc") },
+    { icon: Users, title: t("landing_feat_clients_title"), desc: t("landing_feat_clients_desc") },
+    { icon: Smartphone, title: t("landing_feat_mobile_title"), desc: t("landing_feat_mobile_desc") },
   ];
 
   const benefits = [
@@ -256,7 +232,7 @@ function Landing() {
           <button
             type="button"
             onClick={() => setMenuOpen((v) => !v)}
-            aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
+            aria-label={menuOpen ? t("landing_menu_close") : t("landing_menu_open")}
             aria-expanded={menuOpen}
             className="flex items-center justify-center rounded-lg border border-border p-2 text-foreground transition hover:bg-muted/30 md:hidden"
           >
@@ -305,15 +281,8 @@ function Landing() {
             <Sparkles className="h-3 w-3" /> {t("landing_badge")}
           </div>
           <h1 className="font-display text-5xl leading-none tracking-wide md:text-7xl lg:text-8xl">
-            {t("landing_hero").split("\n").map((_line, i) => (
-              <span key={i}>
-                {i === 0 ? (
-                  <>Tudo que sua <span className="text-gold">barbearia</span><br /></>
-                ) : (
-                  <>precisa em <span className="text-gold">um só lugar</span></>
-                )}
-              </span>
-            ))}
+            {t("landing_hero_pre1")} <span className="text-gold">{t("landing_hero_gold1")}</span><br />
+            {t("landing_hero_pre2")} <span className="text-gold">{t("landing_hero_gold2")}</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
             {t("landing_hero_sub")}
@@ -340,14 +309,14 @@ function Landing() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="mb-16 text-center">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-gold">
-              <Sparkles className="h-3 w-3" /> Funcionalidades
+              <Sparkles className="h-3 w-3" /> {t("landing_features_badge")}
             </div>
             <h2 className="font-display text-4xl tracking-wide md:text-5xl lg:text-6xl">
-              Tudo que sua barbearia{" "}
-              <span className="text-gold">precisa</span>
+              {t("landing_features_title_pre")}{" "}
+              <span className="text-gold">{t("landing_features_title_gold")}</span>
             </h2>
             <p className="mx-auto mt-4 max-w-xl" style={{ fontSize: 16, color: "var(--color-muted-foreground)", lineHeight: 1.7 }}>
-              Cada detalhe pensado para o dia a dia do barbeiro profissional.
+              {t("landing_features_sub")}
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -376,7 +345,7 @@ function Landing() {
 
               <div className="mt-2 text-center">
                 <div className="flex items-end justify-center gap-1">
-                  <span className="font-mono text-5xl font-bold text-white">{PRICING_PRICE}</span>
+                  <span className="font-mono text-5xl font-bold text-gold">{PRICING_PRICE}</span>
                   <span className="mb-1.5 text-muted-foreground">{t("landing_pricing_period")}</span>
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{t("landing_pricing_trial")}</p>
@@ -402,7 +371,7 @@ function Landing() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
-              <p className="mt-3 text-center text-xs text-muted-foreground">🔒 Pagamento seguro via Stripe</p>
+              <p className="mt-3 text-center text-xs text-muted-foreground">{t("paywall_secure_payment")}</p>
             </div>
           </div>
         </div>
